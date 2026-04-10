@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+pydantic
+websockets
+grpcio
+grpcio-tools
+pytest
+pytest-benchmark
+httpx
