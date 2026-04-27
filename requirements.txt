@@ -7,3 +7,4 @@ grpcio-tools
 pytest
 pytest-benchmark
 httpx
+matplotlib
