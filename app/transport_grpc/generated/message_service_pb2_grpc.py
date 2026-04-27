@@ -39,12 +39,23 @@ class MessageServiceStub(object):
                 request_serializer=app_dot_transport__grpc_dot_generated_dot_message__service__pb2.MessageEnvelope.SerializeToString,
                 response_deserializer=app_dot_transport__grpc_dot_generated_dot_message__service__pb2.ProcessReply.FromString,
                 _registered_method=True)
+        self.StreamChanges = channel.unary_stream(
+                '/messagecomparison.MessageService/StreamChanges',
+                request_serializer=app_dot_transport__grpc_dot_generated_dot_message__service__pb2.StateChangeRequest.SerializeToString,
+                response_deserializer=app_dot_transport__grpc_dot_generated_dot_message__service__pb2.StateChangeBatch.FromString,
+                _registered_method=True)
 
 
 class MessageServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
 
     def Process(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def StreamChanges(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -57,6 +68,11 @@ def add_MessageServiceServicer_to_server(servicer, server):
                     servicer.Process,
                     request_deserializer=app_dot_transport__grpc_dot_generated_dot_message__service__pb2.MessageEnvelope.FromString,
                     response_serializer=app_dot_transport__grpc_dot_generated_dot_message__service__pb2.ProcessReply.SerializeToString,
+            ),
+            'StreamChanges': grpc.unary_stream_rpc_method_handler(
+                    servicer.StreamChanges,
+                    request_deserializer=app_dot_transport__grpc_dot_generated_dot_message__service__pb2.StateChangeRequest.FromString,
+                    response_serializer=app_dot_transport__grpc_dot_generated_dot_message__service__pb2.StateChangeBatch.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -86,6 +102,33 @@ class MessageService(object):
             '/messagecomparison.MessageService/Process',
             app_dot_transport__grpc_dot_generated_dot_message__service__pb2.MessageEnvelope.SerializeToString,
             app_dot_transport__grpc_dot_generated_dot_message__service__pb2.ProcessReply.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def StreamChanges(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_stream(
+            request,
+            target,
+            '/messagecomparison.MessageService/StreamChanges',
+            app_dot_transport__grpc_dot_generated_dot_message__service__pb2.StateChangeRequest.SerializeToString,
+            app_dot_transport__grpc_dot_generated_dot_message__service__pb2.StateChangeBatch.FromString,
             options,
             channel_credentials,
             insecure,

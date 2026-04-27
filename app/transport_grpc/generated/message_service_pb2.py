@@ -24,15 +24,15 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n2app/transport_grpc/generated/message_service.proto\x12\x11messagecomparison\"}\n\x0eMessagePayload\x12\x33\n\toperation\x18\x01 \x01(\x0e\x32 .messagecomparison.OperationType\x12\x13\n\x0bresource_id\x18\x02 \x01(\t\x12\x0f\n\x05value\x18\x03 \x01(\x05H\x00\x42\x10\n\x0eoptional_value\"|\n\x0fMessageEnvelope\x12\x12\n\nmessage_id\x18\x01 \x01(\t\x12\x11\n\ttimestamp\x18\x02 \x01(\t\x12\x0e\n\x06source\x18\x03 \x01(\t\x12\x32\n\x07payload\x18\x04 \x01(\x0b\x32!.messagecomparison.MessagePayload\"4\n\x0cUpdateResult\x12\x0e\n\x06\x61\x63tion\x18\x01 \x01(\t\x12\x14\n\x0cstored_value\x18\x02 \x01(\x05\"2\n\tGetResult\x12\x0e\n\x06\x61\x63tion\x18\x01 \x01(\t\x12\x15\n\rcurrent_value\x18\x02 \x01(\x05\"\xd2\x01\n\x0cSuccessReply\x12\x0e\n\x06status\x18\x01 \x01(\t\x12\x12\n\nmessage_id\x18\x02 \x01(\t\x12\x11\n\toperation\x18\x03 \x01(\t\x12\x13\n\x0bresource_id\x18\x04 \x01(\t\x12\x38\n\rupdate_result\x18\x05 \x01(\x0b\x32\x1f.messagecomparison.UpdateResultH\x00\x12\x32\n\nget_result\x18\x06 \x01(\x0b\x32\x1c.messagecomparison.GetResultH\x00\x42\x08\n\x06result\"Q\n\nErrorReply\x12\x0e\n\x06status\x18\x01 \x01(\t\x12\x0c\n\x04\x63ode\x18\x02 \x01(\t\x12\x0f\n\x07message\x18\x03 \x01(\t\x12\x14\n\x0c\x64\x65tails_json\x18\x04 \x01(\t\"}\n\x0cProcessReply\x12\x32\n\x07success\x18\x01 \x01(\x0b\x32\x1f.messagecomparison.SuccessReplyH\x00\x12.\n\x05\x65rror\x18\x02 \x01(\x0b\x32\x1d.messagecomparison.ErrorReplyH\x00\x42\t\n\x07outcome*M\n\rOperationType\x12\x1e\n\x1aOPERATION_TYPE_UNSPECIFIED\x10\x00\x12\r\n\tSET_VALUE\x10\x01\x12\r\n\tGET_VALUE\x10\x02\x32`\n\x0eMessageService\x12N\n\x07Process\x12\".messagecomparison.MessageEnvelope\x1a\x1f.messagecomparison.ProcessReplyb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n2app/transport_grpc/generated/message_service.proto\x12\x11messagecomparison\"}\n\x0eMessagePayload\x12\x33\n\toperation\x18\x01 \x01(\x0e\x32 .messagecomparison.OperationType\x12\x13\n\x0bresource_id\x18\x02 \x01(\t\x12\x0f\n\x05value\x18\x03 \x01(\x05H\x00\x42\x10\n\x0eoptional_value\"|\n\x0fMessageEnvelope\x12\x12\n\nmessage_id\x18\x01 \x01(\t\x12\x11\n\ttimestamp\x18\x02 \x01(\t\x12\x0e\n\x06source\x18\x03 \x01(\t\x12\x32\n\x07payload\x18\x04 \x01(\x0b\x32!.messagecomparison.MessagePayload\"4\n\x0cUpdateResult\x12\x0e\n\x06\x61\x63tion\x18\x01 \x01(\t\x12\x14\n\x0cstored_value\x18\x02 \x01(\x05\"2\n\tGetResult\x12\x0e\n\x06\x61\x63tion\x18\x01 \x01(\t\x12\x15\n\rcurrent_value\x18\x02 \x01(\x05\"\xd2\x01\n\x0cSuccessReply\x12\x0e\n\x06status\x18\x01 \x01(\t\x12\x12\n\nmessage_id\x18\x02 \x01(\t\x12\x11\n\toperation\x18\x03 \x01(\t\x12\x13\n\x0bresource_id\x18\x04 \x01(\t\x12\x38\n\rupdate_result\x18\x05 \x01(\x0b\x32\x1f.messagecomparison.UpdateResultH\x00\x12\x32\n\nget_result\x18\x06 \x01(\x0b\x32\x1c.messagecomparison.GetResultH\x00\x42\x08\n\x06result\"Q\n\nErrorReply\x12\x0e\n\x06status\x18\x01 \x01(\t\x12\x0c\n\x04\x63ode\x18\x02 \x01(\t\x12\x0f\n\x07message\x18\x03 \x01(\t\x12\x14\n\x0c\x64\x65tails_json\x18\x04 \x01(\t\"}\n\x0cProcessReply\x12\x32\n\x07success\x18\x01 \x01(\x0b\x32\x1f.messagecomparison.SuccessReplyH\x00\x12.\n\x05\x65rror\x18\x02 \x01(\x0b\x32\x1d.messagecomparison.ErrorReplyH\x00\x42\t\n\x07outcome\"*\n\x12StateChangeRequest\x12\x14\n\x0c\x66rom_version\x18\x01 \x01(\x05\"Z\n\x10StateChangeEvent\x12\x0f\n\x07version\x18\x01 \x01(\x05\x12\x11\n\ttimestamp\x18\x02 \x01(\t\x12\x13\n\x0bresource_id\x18\x03 \x01(\t\x12\r\n\x05value\x18\x04 \x01(\x05\"v\n\x10StateChangeBatch\x12\x14\n\x0c\x66rom_version\x18\x01 \x01(\x05\x12\x17\n\x0f\x63urrent_version\x18\x02 \x01(\x05\x12\x33\n\x06\x65vents\x18\x03 \x03(\x0b\x32#.messagecomparison.StateChangeEvent*M\n\rOperationType\x12\x1e\n\x1aOPERATION_TYPE_UNSPECIFIED\x10\x00\x12\r\n\tSET_VALUE\x10\x01\x12\r\n\tGET_VALUE\x10\x02\x32\xbf\x01\n\x0eMessageService\x12N\n\x07Process\x12\".messagecomparison.MessageEnvelope\x1a\x1f.messagecomparison.ProcessReply\x12]\n\rStreamChanges\x12%.messagecomparison.StateChangeRequest\x1a#.messagecomparison.StateChangeBatch0\x01\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'app.transport_grpc.generated.message_service_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_OPERATIONTYPE']._serialized_start=855
-  _globals['_OPERATIONTYPE']._serialized_end=932
+  _globals['_OPERATIONTYPE']._serialized_start=1111
+  _globals['_OPERATIONTYPE']._serialized_end=1188
   _globals['_MESSAGEPAYLOAD']._serialized_start=73
   _globals['_MESSAGEPAYLOAD']._serialized_end=198
   _globals['_MESSAGEENVELOPE']._serialized_start=200
@@ -47,6 +47,12 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_ERRORREPLY']._serialized_end=726
   _globals['_PROCESSREPLY']._serialized_start=728
   _globals['_PROCESSREPLY']._serialized_end=853
-  _globals['_MESSAGESERVICE']._serialized_start=934
-  _globals['_MESSAGESERVICE']._serialized_end=1030
+  _globals['_STATECHANGEREQUEST']._serialized_start=855
+  _globals['_STATECHANGEREQUEST']._serialized_end=897
+  _globals['_STATECHANGEEVENT']._serialized_start=899
+  _globals['_STATECHANGEEVENT']._serialized_end=989
+  _globals['_STATECHANGEBATCH']._serialized_start=991
+  _globals['_STATECHANGEBATCH']._serialized_end=1109
+  _globals['_MESSAGESERVICE']._serialized_start=1191
+  _globals['_MESSAGESERVICE']._serialized_end=1382
 # @@protoc_insertion_point(module_scope)

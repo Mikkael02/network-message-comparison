@@ -1,9 +1,14 @@
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, Query, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from app.core.models.message import MessageEnvelope
+from app.core.models.realtime import StateChangeBatch
 from app.core.services.processor import process_message
+from app.core.services.realtime_feed import (
+    get_state_changes_since,
+    seed_demo_state_changes,
+)
 from app.core.services.state_store import (
     InMemoryStateStore,
     ResourceNotFoundError,
@@ -36,7 +41,7 @@ async def request_validation_exception_handler(
         details=exc.errors(),
     )
     return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         content=response.model_dump(mode="json"),
     )
 
@@ -51,7 +56,7 @@ async def business_validation_exception_handler(
         message=str(exc),
     )
     return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         content=response.model_dump(mode="json"),
     )
 
@@ -89,3 +94,23 @@ def process_endpoint(message: MessageEnvelope) -> SuccessResponse:
     validate_business_rules(message)
     result = process_message(message, state_store)
     return build_success_response(result)
+
+
+@app.get(
+    "/changes",
+    response_model=StateChangeBatch,
+    responses={
+        422: {"model": ErrorResponse},
+    },
+)
+def get_changes_endpoint(
+    from_version: int = Query(..., ge=0),
+) -> StateChangeBatch:
+    return get_state_changes_since(state_store, from_version)
+
+
+@app.post("/changes/seed", response_model=StateChangeBatch)
+def seed_changes_endpoint() -> StateChangeBatch:
+    before_version = state_store.get_current_version()
+    seed_demo_state_changes(state_store)
+    return get_state_changes_since(state_store, before_version)

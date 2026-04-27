@@ -4,6 +4,7 @@ package messagecomparison;
 
 service MessageService {
   rpc Process(MessageEnvelope) returns (ProcessReply);
+  rpc StreamChanges(StateChangeRequest) returns (stream StateChangeBatch);
 }
 
 enum OperationType {
@@ -62,4 +63,21 @@ message ProcessReply {
     SuccessReply success = 1;
     ErrorReply error = 2;
   }
+}
+
+message StateChangeRequest {
+  int32 from_version = 1;
+}
+
+message StateChangeEvent {
+  int32 version = 1;
+  string timestamp = 2;
+  string resource_id = 3;
+  int32 value = 4;
+}
+
+message StateChangeBatch {
+  int32 from_version = 1;
+  int32 current_version = 2;
+  repeated StateChangeEvent events = 3;
 }

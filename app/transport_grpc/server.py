@@ -6,6 +6,7 @@ from pydantic import ValidationError
 
 from app.core.models.message import MessageEnvelope
 from app.core.services.processor import process_message
+from app.core.services.realtime_feed import get_state_changes_since
 from app.core.services.state_store import InMemoryStateStore, ResourceNotFoundError
 from app.core.validation.business import validate_business_rules
 from app.core.validation.exceptions import BusinessValidationError
@@ -105,6 +106,24 @@ def _build_error_reply(
     )
 
 
+def _build_state_change_batch(
+    batch,
+) -> message_service_pb2.StateChangeBatch:
+    return message_service_pb2.StateChangeBatch(
+        from_version=batch.from_version,
+        current_version=batch.current_version,
+        events=[
+            message_service_pb2.StateChangeEvent(
+                version=event.version,
+                timestamp=event.timestamp.isoformat(),
+                resource_id=event.resource_id,
+                value=event.value,
+            )
+            for event in batch.events
+        ],
+    )
+
+
 class MessageServiceServicer(message_service_pb2_grpc.MessageServiceServicer):
     def __init__(self, state_store: InMemoryStateStore) -> None:
         self.state_store = state_store
@@ -137,6 +156,17 @@ class MessageServiceServicer(message_service_pb2_grpc.MessageServiceServicer):
                 code=ErrorCode.RESOURCE_NOT_FOUND,
                 message=str(exc),
             )
+
+    def StreamChanges(self, request, context):
+        try:
+            from_version = request.from_version
+            batch = get_state_changes_since(self.state_store, from_version)
+            yield _build_state_change_batch(batch)
+
+        except ValueError as exc:
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            context.set_details(str(exc))
+            return
 
 
 def create_server(
