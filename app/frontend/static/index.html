@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Network Message Comparison — Research Dashboard</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar">
+        <h1 class="app-title">Research Dashboard</h1>
+        <p class="app-subtitle">
+          Comparative analysis of message exchange methods
+        </p>
+
+        <nav class="nav">
+          <button class="nav-item active" id="nav-overhead">
+            Transmission overhead
+          </button>
+          <button class="nav-item" id="nav-transport">
+            Transport comparison
+          </button>
+          <button class="nav-item" disabled>Realtime analysis</button>
+          <button class="nav-item" disabled>Validation analysis</button>
+          <button class="nav-item" disabled>Reports</button>
+        </nav>
+
+        <section class="presets-panel">
+          <h2>Presets</h2>
+          <div id="presets-content">Loading presets...</div>
+        </section>
+      </aside>
+
+      <main class="main-content">
+        <header class="page-header">
+          <div>
+            <h2 id="page-title">Transmission Overhead Calculator</h2>
+            <p id="page-description">
+              Analiza narzutu transmisji dla pojedynczej wiadomości i sekwencji
+              wiadomości w modelu Ethernet II + IPv4 + TCP.
+            </p>
+          </div>
+          <div class="status-badge" id="api-status">Checking API...</div>
+        </header>
+
+        <section id="view-overhead">
+          <section class="panel">
+            <div class="mode-switch">
+              <button id="single-tab" class="tab-button active">Single message</button>
+              <button id="sequence-tab" class="tab-button">Sequence</button>
+            </div>
+
+            <div id="single-form-section">
+              <form id="single-form" class="form-grid">
+                <label>
+                  Application protocol
+                  <select name="application_protocol">
+                    <option value="http">HTTP</option>
+                    <option value="websocket">WebSocket</option>
+                    <option value="grpc">gRPC</option>
+                  </select>
+                </label>
+
+                <label>
+                  Payload encoding
+                  <select name="payload_encoding">
+                    <option value="json">JSON</option>
+                    <option value="protobuf">protobuf</option>
+                  </select>
+                </label>
+
+                <label>
+                  Payload size [bytes]
+                  <input type="number" name="payload_size_bytes" value="10" min="1" />
+                </label>
+
+                <label>
+                  Message count
+                  <input type="number" name="message_count" value="1" min="1" />
+                </label>
+
+                <label>
+                  Message frequency [Hz]
+                  <input
+                    type="number"
+                    name="message_frequency_hz"
+                    value="100"
+                    min="0.0001"
+                    step="0.1"
+                  />
+                </label>
+
+                <label>
+                  MTU [bytes]
+                  <input type="number" name="mtu_bytes" value="1500" min="68" />
+                </label>
+
+                <button type="submit" class="primary-button">
+                  Analyze single message
+                </button>
+              </form>
+            </div>
+
+            <div id="sequence-form-section" class="hidden">
+              <form id="sequence-form" class="form-grid">
+                <label class="wide">
+                  Payload sizes [bytes, comma separated]
+                  <input
+                    type="text"
+                    name="payload_sizes_bytes"
+                    value="10,10,10,10,10,10"
+                  />
+                </label>
+
+                <label>
+                  Application protocol
+                  <select name="application_protocol">
+                    <option value="http">HTTP</option>
+                    <option value="websocket">WebSocket</option>
+                    <option value="grpc">gRPC</option>
+                  </select>
+                </label>
+
+                <label>
+                  Payload encoding
+                  <select name="payload_encoding">
+                    <option value="json">JSON</option>
+                    <option value="protobuf">protobuf</option>
+                  </select>
+                </label>
+
+                <label>
+                  Aggregation mode
+                  <select name="aggregation_mode">
+                    <option value="per_message">per_message</option>
+                    <option value="batched">batched</option>
+                    <option value="nagle_like">nagle_like</option>
+                  </select>
+                </label>
+
+                <label>
+                  Batch size
+                  <input type="number" name="batch_size" value="3" min="1" />
+                </label>
+
+                <label>
+                  Message frequency [Hz]
+                  <input
+                    type="number"
+                    name="message_frequency_hz"
+                    value="100"
+                    min="0.0001"
+                    step="0.1"
+                  />
+                </label>
+
+                <label>
+                  MTU [bytes]
+                  <input type="number" name="mtu_bytes" value="1500" min="68" />
+                </label>
+
+                <button type="submit" class="primary-button">
+                  Analyze sequence
+                </button>
+              </form>
+            </div>
+          </section>
+
+          <section class="panel">
+            <h3>Summary</h3>
+            <div id="summary-cards" class="summary-grid">
+              <div class="summary-card muted">Run analysis to see results.</div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <h3>Detailed result</h3>
+            <pre id="result-json" class="result-box">No result yet.</pre>
+          </section>
+        </section>
+
+        <section id="view-transport" class="hidden">
+          <section class="panel">
+            <h3>Available reports</h3>
+            <div id="available-reports" class="summary-grid">
+              <div class="summary-card muted">Loading reports...</div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <h3>Top-level insights</h3>
+            <div id="insights-cards" class="summary-grid">
+              <div class="summary-card muted">Loading insights...</div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <h3>Request-response summary</h3>
+            <div id="transport-summary-cards" class="summary-grid">
+              <div class="summary-card muted">Loading request-response data...</div>
+            </div>
+            <div id="request-response-table"></div>
+          </section>
+
+          <section class="panel">
+            <h3>Realtime summary</h3>
+            <div id="realtime-summary-cards" class="summary-grid">
+              <div class="summary-card muted">Loading realtime data...</div>
+            </div>
+            <div id="realtime-table"></div>
+          </section>
+
+          <section class="panel">
+            <h3>Validation cost summary</h3>
+            <div id="validation-summary-cards" class="summary-grid">
+              <div class="summary-card muted">Loading validation data...</div>
+            </div>
+            <div id="validation-table"></div>
+          </section>
+
+          <section class="panel">
+            <h3>Report viewer</h3>
+            <div class="report-viewer-controls">
+              <label>
+                Report
+                <select id="report-select">
+                  <option value="interpretation">interpretation</option>
+                  <option value="combined">combined</option>
+                  <option value="request-response">request-response</option>
+                  <option value="realtime-fetch">realtime-fetch</option>
+                  <option value="message-size">message-size</option>
+                  <option value="validation-cost">validation-cost</option>
+                  <option value="overhead-demo">overhead-demo</option>
+                </select>
+              </label>
+              <button id="load-report-button" class="primary-button secondary-button">
+                Load report
+              </button>
+            </div>
+            <pre id="report-viewer" class="result-box">Choose a report to preview.</pre>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
