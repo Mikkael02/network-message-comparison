@@ -5,139 +5,68 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-import json
-import statistics
-import time
-from datetime import datetime, timezone
+import argparse
 
-from benchmarks.external_clients import (
-    ExternalGrpcClient,
-    ExternalHttpClient,
-    ExternalWsClient,
+from app.experiments.models import (
+    ExperimentTransport,
+    RequestResponseExperimentConfig,
+)
+from app.experiments.request_response import (
+    run_request_response_experiment,
+    save_request_response_experiment_results,
 )
 
 
-RESULTS_DIR = Path("results/raw")
-RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-
-ITERATIONS = 50
-
-
-def now_utc_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
-def measure_operation(client, payload: dict, iterations: int) -> list[float]:
-    latencies_ms: list[float] = []
-
-    for _ in range(iterations):
-        start = time.perf_counter_ns()
-        response = client.send(payload)
-        end = time.perf_counter_ns()
-
-        if response["status"] != "success":
-            raise RuntimeError(f"Measurement failed with response: {response}")
-
-        latency_ms = (end - start) / 1_000_000
-        latencies_ms.append(latency_ms)
-
-    return latencies_ms
-
-
-def summarize(latencies_ms: list[float]) -> dict:
-    return {
-        "count": len(latencies_ms),
-        "min_ms": min(latencies_ms),
-        "max_ms": max(latencies_ms),
-        "avg_ms": statistics.mean(latencies_ms),
-        "median_ms": statistics.median(latencies_ms),
-    }
-
-
-def run_transport_measurements(transport_name: str, client) -> dict:
-    set_resource_id = f"{transport_name}_benchmark_set"
-    get_resource_id = f"{transport_name}_benchmark_get"
-
-    set_payload = {
-        "source": "external_benchmark_client",
-        "payload": {
-            "operation": "set_value",
-            "resource_id": set_resource_id,
-            "value": 42,
-        },
-    }
-
-    initial_set_for_get_payload = {
-        "source": "external_benchmark_client",
-        "payload": {
-            "operation": "set_value",
-            "resource_id": get_resource_id,
-            "value": 77,
-        },
-    }
-
-    get_payload = {
-        "source": "external_benchmark_client",
-        "payload": {
-            "operation": "get_value",
-            "resource_id": get_resource_id,
-        },
-    }
-
-    init_response = client.send(initial_set_for_get_payload)
-    if init_response["status"] != "success":
-        raise RuntimeError(
-            f"Failed to prepare GET benchmark for {transport_name}: {init_response}"
-        )
-
-    set_latencies = measure_operation(client, set_payload, ITERATIONS)
-    get_latencies = measure_operation(client, get_payload, ITERATIONS)
-
-    return {
-        "transport": transport_name,
-        "iterations": ITERATIONS,
-        "set_value": {
-            "latencies_ms": set_latencies,
-            "summary": summarize(set_latencies),
-        },
-        "get_value": {
-            "latencies_ms": get_latencies,
-            "summary": summarize(get_latencies),
-        },
-    }
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Run request-response external experiment."
+    )
+    parser.add_argument(
+        "--iterations",
+        type=int,
+        default=50,
+        help="Number of iterations per operation and transport.",
+    )
+    parser.add_argument(
+        "--transports",
+        nargs="+",
+        default=["http", "ws", "grpc"],
+        help="Transports to measure. Example: --transports http grpc",
+    )
+    parser.add_argument(
+        "--output",
+        default="results/raw/request_response_external.json",
+        help="Output JSON path.",
+    )
+    parser.add_argument(
+        "--http-base-url",
+        default="http://127.0.0.1:8000",
+    )
+    parser.add_argument(
+        "--ws-url",
+        default="ws://127.0.0.1:8001/ws/process",
+    )
+    parser.add_argument(
+        "--grpc-address",
+        default="127.0.0.1:50051",
+    )
+    return parser.parse_args()
 
 
 def main() -> None:
-    started_at = now_utc_iso()
+    args = parse_args()
 
-    clients = {
-        "http": ExternalHttpClient(),
-        "ws": ExternalWsClient(),
-        "grpc": ExternalGrpcClient(),
-    }
+    config = RequestResponseExperimentConfig(
+        transports=[ExperimentTransport(value) for value in args.transports],
+        iterations=args.iterations,
+        http_base_url=args.http_base_url,
+        ws_url=args.ws_url,
+        grpc_address=args.grpc_address,
+    )
 
-    results = {
-        "started_at": started_at,
-        "iterations": ITERATIONS,
-        "measurements": [],
-    }
-
-    try:
-        for transport_name, client in clients.items():
-            print(f"Measuring transport: {transport_name}")
-            result = run_transport_measurements(transport_name, client)
-            results["measurements"].append(result)
-
-    finally:
-        for client in clients.values():
-            client.close()
-
-    finished_at = now_utc_iso()
-    results["finished_at"] = finished_at
-
-    output_path = RESULTS_DIR / "request_response_external.json"
-    with output_path.open("w", encoding="utf-8") as f:
-        json.dump(results, f, indent=2)
+    results = run_request_response_experiment(config)
+    output_path = Path(args.output)
+    save_request_response_experiment_results(results, output_path)
 
     print(f"Results saved to: {output_path}")
 

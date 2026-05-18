@@ -182,6 +182,374 @@
 
         <section id="view-transport" class="hidden">
           <section class="panel">
+            <h3>Run request-response experiment</h3>
+            <form id="request-response-experiment-form" class="form-grid">
+              <label>
+                Iterations
+                <input type="number" name="iterations" value="50" min="1" max="5000" />
+              </label>
+
+              <label>
+                Source
+                <input type="text" name="source" value="external_benchmark_client" />
+              </label>
+
+              <label>
+                Set value
+                <input type="number" name="set_value" value="42" min="0" max="1000" />
+              </label>
+
+              <label>
+                GET seed value
+                <input type="number" name="get_seed_value" value="77" min="0" max="1000" />
+              </label>
+
+              <label>
+                HTTP base URL
+                <input type="text" name="http_base_url" value="http://127.0.0.1:8000" />
+              </label>
+
+              <label>
+                WebSocket URL
+                <input type="text" name="ws_url" value="ws://127.0.0.1:8001/ws/process" />
+              </label>
+
+              <label>
+                gRPC address
+                <input type="text" name="grpc_address" value="127.0.0.1:50051" />
+              </label>
+
+              <label>
+                Set resource prefix
+                <input type="text" name="set_resource_prefix" value="rr_benchmark_set" />
+              </label>
+
+              <label>
+                GET resource prefix
+                <input type="text" name="get_resource_prefix" value="rr_benchmark_get" />
+              </label>
+
+              <div class="checkbox-group wide">
+                <span class="checkbox-group-title">Transports</span>
+                <label class="checkbox-inline">
+                  <input type="checkbox" name="transport_http" checked />
+                  HTTP
+                </label>
+                <label class="checkbox-inline">
+                  <input type="checkbox" name="transport_ws" checked />
+                  WebSocket
+                </label>
+                <label class="checkbox-inline">
+                  <input type="checkbox" name="transport_grpc" checked />
+                  gRPC
+                </label>
+              </div>
+
+              <div class="form-actions wide">
+                <button type="button" id="load-request-response-defaults" class="primary-button secondary-button">
+                  Load default config
+                </button>
+                <button type="submit" class="primary-button">
+                  Run request-response experiment
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <section class="panel">
+            <h3>Last request-response experiment summary</h3>
+            <div id="request-response-run-summary" class="summary-grid">
+              <div class="summary-card muted">Run experiment to see results.</div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <h3>Last request-response experiment results</h3>
+            <div id="request-response-run-table"></div>
+          </section>
+
+          <section class="panel">
+            <h3>Last request-response experiment JSON</h3>
+            <pre id="request-response-run-json" class="result-box">No experiment result yet.</pre>
+          </section>
+
+          <section class="panel">
+            <h3>Run realtime experiment</h3>
+            <form id="realtime-experiment-form" class="form-grid">
+              <label>
+                Iterations
+                <input type="number" name="iterations" value="50" min="1" max="5000" />
+              </label>
+
+              <label>
+                Resource prefix
+                <input type="text" name="resource_prefix" value="realtime_benchmark" />
+              </label>
+
+              <label>
+                First value
+                <input type="number" name="first_value" value="10" min="0" max="1000" />
+              </label>
+
+              <label>
+                Second value
+                <input type="number" name="second_value" value="20" min="0" max="1000" />
+              </label>
+
+              <label>
+                Third value
+                <input type="number" name="third_value" value="15" min="0" max="1000" />
+              </label>
+
+              <label>
+                HTTP base URL
+                <input type="text" name="http_base_url" value="http://127.0.0.1:8000" />
+              </label>
+
+              <label>
+                WebSocket changes URL
+                <input type="text" name="ws_changes_url" value="ws://127.0.0.1:8001/ws/changes" />
+              </label>
+
+              <label>
+                WebSocket process URL
+                <input type="text" name="ws_process_url" value="ws://127.0.0.1:8001/ws/process" />
+              </label>
+
+              <label>
+                gRPC address
+                <input type="text" name="grpc_address" value="127.0.0.1:50051" />
+              </label>
+
+              <div class="checkbox-group wide">
+                <span class="checkbox-group-title">Transports</span>
+                <label class="checkbox-inline">
+                  <input type="checkbox" name="realtime_transport_http" checked />
+                  HTTP
+                </label>
+                <label class="checkbox-inline">
+                  <input type="checkbox" name="realtime_transport_ws" checked />
+                  WebSocket
+                </label>
+                <label class="checkbox-inline">
+                  <input type="checkbox" name="realtime_transport_grpc" checked />
+                  gRPC
+                </label>
+              </div>
+
+              <div class="form-actions wide">
+                <button type="button" id="load-realtime-defaults" class="primary-button secondary-button">
+                  Load default config
+                </button>
+                <button type="submit" class="primary-button">
+                  Run realtime experiment
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <section class="panel">
+            <h3>Last realtime experiment summary</h3>
+            <div id="realtime-run-summary" class="summary-grid">
+              <div class="summary-card muted">Run experiment to see results.</div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <h3>Last realtime experiment results</h3>
+            <div id="realtime-run-table"></div>
+          </section>
+
+          <section class="panel">
+            <h3>Last realtime experiment JSON</h3>
+            <pre id="realtime-run-json" class="result-box">No experiment result yet.</pre>
+          </section>
+
+          <section class="panel">
+            <h3>Run validation experiment</h3>
+            <form id="validation-experiment-form" class="form-grid">
+              <label>
+                Iterations
+                <input type="number" name="iterations" value="5000" min="1" max="200000" />
+              </label>
+
+              <label>
+                Source
+                <input type="text" name="source" value="validation_benchmark_client" />
+              </label>
+
+              <label>
+                Valid resource ID
+                <input type="text" name="valid_resource_id" value="validation_valid_set" />
+              </label>
+
+              <label>
+                Readonly resource ID
+                <input type="text" name="readonly_resource_id" value="readonly_validation_target" />
+              </label>
+
+              <label>
+                Valid value
+                <input type="number" name="valid_value" value="42" min="0" max="1000" />
+              </label>
+
+              <div class="checkbox-group wide">
+                <span class="checkbox-group-title">Scenarios</span>
+                <label class="checkbox-inline">
+                  <input type="checkbox" name="scenario_baseline_valid_dict" checked />
+                  baseline_valid_dict
+                </label>
+                <label class="checkbox-inline">
+                  <input type="checkbox" name="scenario_structural_validation_valid_set" checked />
+                  structural_validation_valid_set
+                </label>
+                <label class="checkbox-inline">
+                  <input type="checkbox" name="scenario_full_validation_valid_set" checked />
+                  full_validation_valid_set
+                </label>
+                <label class="checkbox-inline">
+                  <input type="checkbox" name="scenario_structural_validation_invalid" checked />
+                  structural_validation_invalid
+                </label>
+                <label class="checkbox-inline">
+                  <input type="checkbox" name="scenario_business_validation_invalid" checked />
+                  business_validation_invalid
+                </label>
+              </div>
+
+              <div class="form-actions wide">
+                <button type="button" id="load-validation-defaults" class="primary-button secondary-button">
+                  Load default config
+                </button>
+                <button type="submit" class="primary-button">
+                  Run validation experiment
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <section class="panel">
+            <h3>Last validation experiment summary</h3>
+            <div id="validation-run-summary" class="summary-grid">
+              <div class="summary-card muted">Run experiment to see results.</div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <h3>Last validation experiment results</h3>
+            <div id="validation-run-table"></div>
+          </section>
+
+          <section class="panel">
+            <h3>Last validation experiment JSON</h3>
+            <pre id="validation-run-json" class="result-box">No experiment result yet.</pre>
+          </section>
+
+          <section class="panel">
+            <h3>Run serialization experiment</h3>
+            <form id="serialization-experiment-form" class="form-grid">
+              <label>
+                Iterations
+                <input type="number" name="iterations" value="2000" min="1" max="100000" />
+              </label>
+
+              <label>
+                Source
+                <input type="text" name="source" value="serialization_benchmark_client" />
+              </label>
+
+              <label>
+                Set value
+                <input type="number" name="set_value" value="42" min="0" max="1000" />
+              </label>
+
+              <label>
+                GET seed value
+                <input type="number" name="get_seed_value" value="77" min="0" max="1000" />
+              </label>
+
+              <label>
+                HTTP base URL
+                <input type="text" name="http_base_url" value="http://127.0.0.1:8000" />
+              </label>
+
+              <label>
+                WebSocket URL
+                <input type="text" name="ws_url" value="ws://127.0.0.1:8001/ws/process" />
+              </label>
+
+              <label>
+                gRPC address
+                <input type="text" name="grpc_address" value="127.0.0.1:50051" />
+              </label>
+
+              <label>
+                Set resource prefix
+                <input type="text" name="set_resource_prefix" value="serialization_set" />
+              </label>
+
+              <label>
+                GET resource prefix
+                <input type="text" name="get_resource_prefix" value="serialization_get" />
+              </label>
+
+              <div class="checkbox-group wide">
+                <span class="checkbox-group-title">Transports</span>
+                <label class="checkbox-inline">
+                  <input type="checkbox" name="serialization_transport_http" checked />
+                  HTTP
+                </label>
+                <label class="checkbox-inline">
+                  <input type="checkbox" name="serialization_transport_ws" checked />
+                  WebSocket
+                </label>
+                <label class="checkbox-inline">
+                  <input type="checkbox" name="serialization_transport_grpc" checked />
+                  gRPC
+                </label>
+              </div>
+
+              <div class="checkbox-group wide">
+                <span class="checkbox-group-title">Operations</span>
+                <label class="checkbox-inline">
+                  <input type="checkbox" name="serialization_operation_set_value" checked />
+                  set_value
+                </label>
+                <label class="checkbox-inline">
+                  <input type="checkbox" name="serialization_operation_get_value" checked />
+                  get_value
+                </label>
+              </div>
+
+              <div class="form-actions wide">
+                <button type="button" id="load-serialization-defaults" class="primary-button secondary-button">
+                  Load default config
+                </button>
+                <button type="submit" class="primary-button">
+                  Run serialization experiment
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <section class="panel">
+            <h3>Last serialization experiment summary</h3>
+            <div id="serialization-run-summary" class="summary-grid">
+              <div class="summary-card muted">Run experiment to see results.</div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <h3>Last serialization experiment results</h3>
+            <div id="serialization-run-table"></div>
+          </section>
+
+          <section class="panel">
+            <h3>Last serialization experiment JSON</h3>
+            <pre id="serialization-run-json" class="result-box">No experiment result yet.</pre>
+          </section>
+
+          <section class="panel">
             <h3>Available reports</h3>
             <div id="available-reports" class="summary-grid">
               <div class="summary-card muted">Loading reports...</div>

@@ -162,7 +162,9 @@ body {
   color: var(--muted);
 }
 
-.form-grid label.wide {
+.form-grid label.wide,
+.form-actions.wide,
+.checkbox-group.wide {
   grid-column: 1 / -1;
 }
 
@@ -191,6 +193,37 @@ body {
   background: var(--panel-2);
   color: var(--text);
   border: 1px solid var(--border);
+}
+
+.checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.checkbox-group-title {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.checkbox-inline {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  color: var(--text) !important;
+}
+
+.checkbox-inline input {
+  width: auto;
+  margin: 0;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
 }
 
 .summary-grid {
@@ -313,7 +346,13 @@ body {
   }
 
   .page-header,
-  .report-viewer-controls {
+  .report-viewer-controls,
+  .form-actions {
     flex-direction: column;
+  }
+
+  .checkbox-group {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }

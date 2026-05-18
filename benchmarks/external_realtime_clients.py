@@ -1,4 +1,3 @@
-import asyncio
 import json
 from typing import Any
 
@@ -50,8 +49,13 @@ class ExternalRealtimeHttpClient:
 
 
 class ExternalRealtimeWsClient:
-    def __init__(self, url: str = "ws://127.0.0.1:8001/ws/changes") -> None:
+    def __init__(
+        self,
+        url: str = "ws://127.0.0.1:8001/ws/changes",
+        process_url: str = "ws://127.0.0.1:8001/ws/process",
+    ) -> None:
         self.url = url
+        self.process_url = process_url
         self.websocket = None
 
     async def open(self) -> None:
@@ -67,7 +71,7 @@ class ExternalRealtimeWsClient:
             await client.post("/ws/changes/seed")
 
     async def set_value(self, resource_id: str, value: int) -> None:
-        async with websockets.connect("ws://127.0.0.1:8001/ws/process") as websocket:
+        async with websockets.connect(self.process_url) as websocket:
             await websocket.send(json.dumps(build_set_value_payload(resource_id, value)))
             raw_response = await websocket.recv()
             data = json.loads(raw_response)

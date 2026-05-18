@@ -16,6 +16,14 @@ def test_frontend_root_returns_html():
     assert "Transport comparison" in response.text
     assert "Top-level insights" in response.text
     assert "Report viewer" in response.text
+    assert "Run request-response experiment" in response.text
+    assert "Last request-response experiment summary" in response.text
+    assert "Run realtime experiment" in response.text
+    assert "Last realtime experiment summary" in response.text
+    assert "Run validation experiment" in response.text
+    assert "Last validation experiment summary" in response.text
+    assert "Run serialization experiment" in response.text
+    assert "Last serialization experiment summary" in response.text
 
 
 def test_frontend_static_css_is_served():

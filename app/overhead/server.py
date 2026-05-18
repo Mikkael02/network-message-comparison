@@ -21,6 +21,16 @@ from app.overhead.presets import (
     DEFAULT_PROTOCOL_PRESETS,
 )
 
+from app.experiments.models import (
+    RequestResponseExperimentConfig,
+    RealtimeFetchExperimentConfig,
+    ValidationExperimentConfig,
+    SerializationExperimentConfig,
+)
+from app.experiments.request_response import run_request_response_experiment
+from app.experiments.realtime import run_realtime_fetch_experiment
+from app.experiments.validation import run_validation_experiment
+from app.experiments.serialization import run_serialization_experiment
 
 class PresetsResponse(BaseModel):
     layer_presets: dict
@@ -124,3 +134,47 @@ def get_report(report_key: str):
             return {"content": f.read()}
 
     raise HTTPException(status_code=400, detail="Unsupported report format")
+
+@app.get("/experiments/request-response/default-config")
+def get_request_response_default_config() -> RequestResponseExperimentConfig:
+    return RequestResponseExperimentConfig()
+
+
+@app.post("/experiments/request-response/run")
+def run_request_response_endpoint(
+    config: RequestResponseExperimentConfig,
+) -> dict:
+    return run_request_response_experiment(config)
+
+@app.get("/experiments/realtime/default-config")
+def get_realtime_default_config() -> RealtimeFetchExperimentConfig:
+    return RealtimeFetchExperimentConfig()
+
+
+@app.post("/experiments/realtime/run")
+def run_realtime_endpoint(
+    config: RealtimeFetchExperimentConfig,
+) -> dict:
+    return run_realtime_fetch_experiment(config)
+
+@app.get("/experiments/validation/default-config")
+def get_validation_default_config() -> ValidationExperimentConfig:
+    return ValidationExperimentConfig()
+
+
+@app.post("/experiments/validation/run")
+def run_validation_endpoint(
+    config: ValidationExperimentConfig,
+) -> dict:
+    return run_validation_experiment(config)
+
+@app.get("/experiments/serialization/default-config")
+def get_serialization_default_config() -> SerializationExperimentConfig:
+    return SerializationExperimentConfig()
+
+
+@app.post("/experiments/serialization/run")
+def run_serialization_endpoint(
+    config: SerializationExperimentConfig,
+) -> dict:
+    return run_serialization_experiment(config)

@@ -16,6 +16,30 @@ const viewTransport = document.getElementById("view-transport");
 const pageTitle = document.getElementById("page-title");
 const pageDescription = document.getElementById("page-description");
 
+const requestResponseExperimentForm = document.getElementById("request-response-experiment-form");
+const loadRequestResponseDefaultsButton = document.getElementById("load-request-response-defaults");
+const requestResponseRunSummary = document.getElementById("request-response-run-summary");
+const requestResponseRunTable = document.getElementById("request-response-run-table");
+const requestResponseRunJson = document.getElementById("request-response-run-json");
+
+const realtimeExperimentForm = document.getElementById("realtime-experiment-form");
+const loadRealtimeDefaultsButton = document.getElementById("load-realtime-defaults");
+const realtimeRunSummary = document.getElementById("realtime-run-summary");
+const realtimeRunTable = document.getElementById("realtime-run-table");
+const realtimeRunJson = document.getElementById("realtime-run-json");
+
+const validationExperimentForm = document.getElementById("validation-experiment-form");
+const loadValidationDefaultsButton = document.getElementById("load-validation-defaults");
+const validationRunSummary = document.getElementById("validation-run-summary");
+const validationRunTable = document.getElementById("validation-run-table");
+const validationRunJson = document.getElementById("validation-run-json");
+
+const serializationExperimentForm = document.getElementById("serialization-experiment-form");
+const loadSerializationDefaultsButton = document.getElementById("load-serialization-defaults");
+const serializationRunSummary = document.getElementById("serialization-run-summary");
+const serializationRunTable = document.getElementById("serialization-run-table");
+const serializationRunJson = document.getElementById("serialization-run-json");
+
 const availableReports = document.getElementById("available-reports");
 const insightsCards = document.getElementById("insights-cards");
 const transportSummaryCards = document.getElementById("transport-summary-cards");
@@ -30,20 +54,16 @@ const reportViewer = document.getElementById("report-viewer");
 
 function setMode(mode) {
   const singleActive = mode === "single";
-
   singleTab.classList.toggle("active", singleActive);
   sequenceTab.classList.toggle("active", !singleActive);
-
   singleFormSection.classList.toggle("hidden", !singleActive);
   sequenceFormSection.classList.toggle("hidden", singleActive);
 }
 
 function setMainView(view) {
   const overheadActive = view === "overhead";
-
   navOverhead.classList.toggle("active", overheadActive);
   navTransport.classList.toggle("active", !overheadActive);
-
   viewOverhead.classList.toggle("hidden", !overheadActive);
   viewTransport.classList.toggle("hidden", overheadActive);
 
@@ -54,14 +74,13 @@ function setMainView(view) {
   } else {
     pageTitle.textContent = "Transport Comparison Dashboard";
     pageDescription.textContent =
-      "Przegląd wcześniej wygenerowanych wyników dla request-response, realtime, walidacji i raportów zbiorczych.";
+      "Przegląd wcześniej wygenerowanych wyników dla request-response, realtime, walidacji i raportów zbiorczych oraz uruchamianie eksperymentów request-response, realtime, validation i serialization.";
     loadReportsDashboard();
   }
 }
 
 function renderSummary(cards) {
   summaryCards.innerHTML = "";
-
   for (const card of cards) {
     const div = document.createElement("div");
     div.className = "summary-card";
@@ -75,7 +94,6 @@ function renderSummary(cards) {
 
 function renderCardGroup(container, cards) {
   container.innerHTML = "";
-
   for (const card of cards) {
     const div = document.createElement("div");
     div.className = "summary-card";
@@ -119,6 +137,19 @@ function renderTable(container, columns, rows) {
       </table>
     </div>
   `;
+}
+
+function getNestedValue(obj, path) {
+  return path.split(".").reduce((acc, part) => acc[part], obj);
+}
+
+function bestRowBy(rows, field, predicate = null) {
+  const filtered = predicate ? rows.filter(predicate) : rows;
+  return [...filtered].sort((a, b) => getNestedValue(a, field) - getNestedValue(b, field))[0];
+}
+
+function worstRowBy(rows, field) {
+  return [...rows].sort((a, b) => getNestedValue(b, field) - getNestedValue(a, field))[0];
 }
 
 async function checkHealth() {
@@ -193,16 +224,111 @@ function buildSequencePayload(formData) {
   };
 }
 
+function getSelectedRequestResponseTransports() {
+  const transports = [];
+  if (requestResponseExperimentForm.querySelector('input[name="transport_http"]').checked) transports.push("http");
+  if (requestResponseExperimentForm.querySelector('input[name="transport_ws"]').checked) transports.push("ws");
+  if (requestResponseExperimentForm.querySelector('input[name="transport_grpc"]').checked) transports.push("grpc");
+  return transports;
+}
+
+function getSelectedRealtimeTransports() {
+  const transports = [];
+  if (realtimeExperimentForm.querySelector('input[name="realtime_transport_http"]').checked) transports.push("http");
+  if (realtimeExperimentForm.querySelector('input[name="realtime_transport_ws"]').checked) transports.push("ws");
+  if (realtimeExperimentForm.querySelector('input[name="realtime_transport_grpc"]').checked) transports.push("grpc");
+  return transports;
+}
+
+function getSelectedValidationScenarios() {
+  const scenarios = [];
+  if (validationExperimentForm.querySelector('input[name="scenario_baseline_valid_dict"]').checked) scenarios.push("baseline_valid_dict");
+  if (validationExperimentForm.querySelector('input[name="scenario_structural_validation_valid_set"]').checked) scenarios.push("structural_validation_valid_set");
+  if (validationExperimentForm.querySelector('input[name="scenario_full_validation_valid_set"]').checked) scenarios.push("full_validation_valid_set");
+  if (validationExperimentForm.querySelector('input[name="scenario_structural_validation_invalid"]').checked) scenarios.push("structural_validation_invalid");
+  if (validationExperimentForm.querySelector('input[name="scenario_business_validation_invalid"]').checked) scenarios.push("business_validation_invalid");
+  return scenarios;
+}
+
+function getSelectedSerializationTransports() {
+  const transports = [];
+  if (serializationExperimentForm.querySelector('input[name="serialization_transport_http"]').checked) transports.push("http");
+  if (serializationExperimentForm.querySelector('input[name="serialization_transport_ws"]').checked) transports.push("ws");
+  if (serializationExperimentForm.querySelector('input[name="serialization_transport_grpc"]').checked) transports.push("grpc");
+  return transports;
+}
+
+function getSelectedSerializationOperations() {
+  const operations = [];
+  if (serializationExperimentForm.querySelector('input[name="serialization_operation_set_value"]').checked) operations.push("set_value");
+  if (serializationExperimentForm.querySelector('input[name="serialization_operation_get_value"]').checked) operations.push("get_value");
+  return operations;
+}
+
+function buildRequestResponseExperimentPayload(formData) {
+  return {
+    transports: getSelectedRequestResponseTransports(),
+    iterations: Number(formData.get("iterations")),
+    http_base_url: formData.get("http_base_url"),
+    ws_url: formData.get("ws_url"),
+    grpc_address: formData.get("grpc_address"),
+    source: formData.get("source"),
+    set_value: Number(formData.get("set_value")),
+    get_seed_value: Number(formData.get("get_seed_value")),
+    set_resource_prefix: formData.get("set_resource_prefix"),
+    get_resource_prefix: formData.get("get_resource_prefix"),
+  };
+}
+
+function buildRealtimeExperimentPayload(formData) {
+  return {
+    transports: getSelectedRealtimeTransports(),
+    iterations: Number(formData.get("iterations")),
+    http_base_url: formData.get("http_base_url"),
+    ws_changes_url: formData.get("ws_changes_url"),
+    ws_process_url: formData.get("ws_process_url"),
+    grpc_address: formData.get("grpc_address"),
+    resource_prefix: formData.get("resource_prefix"),
+    first_value: Number(formData.get("first_value")),
+    second_value: Number(formData.get("second_value")),
+    third_value: Number(formData.get("third_value")),
+  };
+}
+
+function buildValidationExperimentPayload(formData) {
+  return {
+    scenarios: getSelectedValidationScenarios(),
+    iterations: Number(formData.get("iterations")),
+    source: formData.get("source"),
+    valid_resource_id: formData.get("valid_resource_id"),
+    readonly_resource_id: formData.get("readonly_resource_id"),
+    valid_value: Number(formData.get("valid_value")),
+  };
+}
+
+function buildSerializationExperimentPayload(formData) {
+  return {
+    transports: getSelectedSerializationTransports(),
+    operations: getSelectedSerializationOperations(),
+    iterations: Number(formData.get("iterations")),
+    http_base_url: formData.get("http_base_url"),
+    ws_url: formData.get("ws_url"),
+    grpc_address: formData.get("grpc_address"),
+    source: formData.get("source"),
+    set_value: Number(formData.get("set_value")),
+    get_seed_value: Number(formData.get("get_seed_value")),
+    set_resource_prefix: formData.get("set_resource_prefix"),
+    get_resource_prefix: formData.get("get_resource_prefix"),
+  };
+}
+
 async function analyzeSingle(event) {
   event.preventDefault();
-
   const payload = buildSinglePayload(new FormData(singleForm));
 
   const response = await fetch("/analyze/single", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
 
@@ -215,22 +341,10 @@ async function analyzeSingle(event) {
   }
 
   renderSummary([
-    {
-      label: "Total transmitted bytes",
-      value: String(data.layer_breakdown.total_transmitted_bytes),
-    },
-    {
-      label: "Frame count",
-      value: String(data.frame_analysis.frame_count),
-    },
-    {
-      label: "Payload efficiency",
-      value: data.efficiency.payload_efficiency_ratio.toFixed(4),
-    },
-    {
-      label: "Required bitrate [kbps]",
-      value: data.efficiency.required_bitrate_kbps.toFixed(4),
-    },
+    { label: "Total transmitted bytes", value: String(data.layer_breakdown.total_transmitted_bytes) },
+    { label: "Frame count", value: String(data.frame_analysis.frame_count) },
+    { label: "Payload efficiency", value: data.efficiency.payload_efficiency_ratio.toFixed(4) },
+    { label: "Required bitrate [kbps]", value: data.efficiency.required_bitrate_kbps.toFixed(4) },
   ]);
 
   renderResult(data);
@@ -238,14 +352,11 @@ async function analyzeSingle(event) {
 
 async function analyzeSequence(event) {
   event.preventDefault();
-
   const payload = buildSequencePayload(new FormData(sequenceForm));
 
   const response = await fetch("/analyze/sequence", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
 
@@ -258,22 +369,10 @@ async function analyzeSequence(event) {
   }
 
   renderSummary([
-    {
-      label: "Aggregated message count",
-      value: String(data.aggregated_message_count),
-    },
-    {
-      label: "Total transmitted bytes",
-      value: String(data.total_transmitted_bytes),
-    },
-    {
-      label: "Total frame count",
-      value: String(data.total_frame_count),
-    },
-    {
-      label: "Payload efficiency",
-      value: data.payload_efficiency_ratio.toFixed(4),
-    },
+    { label: "Aggregated message count", value: String(data.aggregated_message_count) },
+    { label: "Total transmitted bytes", value: String(data.total_transmitted_bytes) },
+    { label: "Total frame count", value: String(data.total_frame_count) },
+    { label: "Payload efficiency", value: data.payload_efficiency_ratio.toFixed(4) },
   ]);
 
   renderResult(data);
@@ -287,13 +386,377 @@ async function fetchReport(key) {
   return await response.json();
 }
 
-function bestRowBy(rows, field, predicate = null) {
-  const filtered = predicate ? rows.filter(predicate) : rows;
-  return [...filtered].sort((a, b) => a[field] - b[field])[0];
+function fillRequestResponseExperimentForm(config) {
+  requestResponseExperimentForm.querySelector('input[name="iterations"]').value = config.iterations;
+  requestResponseExperimentForm.querySelector('input[name="source"]').value = config.source;
+  requestResponseExperimentForm.querySelector('input[name="set_value"]').value = config.set_value;
+  requestResponseExperimentForm.querySelector('input[name="get_seed_value"]').value = config.get_seed_value;
+  requestResponseExperimentForm.querySelector('input[name="http_base_url"]').value = config.http_base_url;
+  requestResponseExperimentForm.querySelector('input[name="ws_url"]').value = config.ws_url;
+  requestResponseExperimentForm.querySelector('input[name="grpc_address"]').value = config.grpc_address;
+  requestResponseExperimentForm.querySelector('input[name="set_resource_prefix"]').value = config.set_resource_prefix;
+  requestResponseExperimentForm.querySelector('input[name="get_resource_prefix"]').value = config.get_resource_prefix;
+
+  const transports = new Set(config.transports);
+  requestResponseExperimentForm.querySelector('input[name="transport_http"]').checked = transports.has("http");
+  requestResponseExperimentForm.querySelector('input[name="transport_ws"]').checked = transports.has("ws");
+  requestResponseExperimentForm.querySelector('input[name="transport_grpc"]').checked = transports.has("grpc");
 }
 
-function worstRowBy(rows, field) {
-  return [...rows].sort((a, b) => b[field] - a[field])[0];
+function fillRealtimeExperimentForm(config) {
+  realtimeExperimentForm.querySelector('input[name="iterations"]').value = config.iterations;
+  realtimeExperimentForm.querySelector('input[name="resource_prefix"]').value = config.resource_prefix;
+  realtimeExperimentForm.querySelector('input[name="first_value"]').value = config.first_value;
+  realtimeExperimentForm.querySelector('input[name="second_value"]').value = config.second_value;
+  realtimeExperimentForm.querySelector('input[name="third_value"]').value = config.third_value;
+  realtimeExperimentForm.querySelector('input[name="http_base_url"]').value = config.http_base_url;
+  realtimeExperimentForm.querySelector('input[name="ws_changes_url"]').value = config.ws_changes_url;
+  realtimeExperimentForm.querySelector('input[name="ws_process_url"]').value = config.ws_process_url;
+  realtimeExperimentForm.querySelector('input[name="grpc_address"]').value = config.grpc_address;
+
+  const transports = new Set(config.transports);
+  realtimeExperimentForm.querySelector('input[name="realtime_transport_http"]').checked = transports.has("http");
+  realtimeExperimentForm.querySelector('input[name="realtime_transport_ws"]').checked = transports.has("ws");
+  realtimeExperimentForm.querySelector('input[name="realtime_transport_grpc"]').checked = transports.has("grpc");
+}
+
+function fillValidationExperimentForm(config) {
+  validationExperimentForm.querySelector('input[name="iterations"]').value = config.iterations;
+  validationExperimentForm.querySelector('input[name="source"]').value = config.source;
+  validationExperimentForm.querySelector('input[name="valid_resource_id"]').value = config.valid_resource_id;
+  validationExperimentForm.querySelector('input[name="readonly_resource_id"]').value = config.readonly_resource_id;
+  validationExperimentForm.querySelector('input[name="valid_value"]').value = config.valid_value;
+
+  const scenarios = new Set(config.scenarios);
+  validationExperimentForm.querySelector('input[name="scenario_baseline_valid_dict"]').checked = scenarios.has("baseline_valid_dict");
+  validationExperimentForm.querySelector('input[name="scenario_structural_validation_valid_set"]').checked = scenarios.has("structural_validation_valid_set");
+  validationExperimentForm.querySelector('input[name="scenario_full_validation_valid_set"]').checked = scenarios.has("full_validation_valid_set");
+  validationExperimentForm.querySelector('input[name="scenario_structural_validation_invalid"]').checked = scenarios.has("structural_validation_invalid");
+  validationExperimentForm.querySelector('input[name="scenario_business_validation_invalid"]').checked = scenarios.has("business_validation_invalid");
+}
+
+function fillSerializationExperimentForm(config) {
+  serializationExperimentForm.querySelector('input[name="iterations"]').value = config.iterations;
+  serializationExperimentForm.querySelector('input[name="source"]').value = config.source;
+  serializationExperimentForm.querySelector('input[name="set_value"]').value = config.set_value;
+  serializationExperimentForm.querySelector('input[name="get_seed_value"]').value = config.get_seed_value;
+  serializationExperimentForm.querySelector('input[name="http_base_url"]').value = config.http_base_url;
+  serializationExperimentForm.querySelector('input[name="ws_url"]').value = config.ws_url;
+  serializationExperimentForm.querySelector('input[name="grpc_address"]').value = config.grpc_address;
+  serializationExperimentForm.querySelector('input[name="set_resource_prefix"]').value = config.set_resource_prefix;
+  serializationExperimentForm.querySelector('input[name="get_resource_prefix"]').value = config.get_resource_prefix;
+
+  const transports = new Set(config.transports);
+  serializationExperimentForm.querySelector('input[name="serialization_transport_http"]').checked = transports.has("http");
+  serializationExperimentForm.querySelector('input[name="serialization_transport_ws"]').checked = transports.has("ws");
+  serializationExperimentForm.querySelector('input[name="serialization_transport_grpc"]').checked = transports.has("grpc");
+
+  const operations = new Set(config.operations);
+  serializationExperimentForm.querySelector('input[name="serialization_operation_set_value"]').checked = operations.has("set_value");
+  serializationExperimentForm.querySelector('input[name="serialization_operation_get_value"]').checked = operations.has("get_value");
+}
+
+async function loadRequestResponseDefaults() {
+  try {
+    const response = await fetch("/experiments/request-response/default-config");
+    const config = await response.json();
+    fillRequestResponseExperimentForm(config);
+  } catch (error) {
+    requestResponseRunJson.textContent = "Could not load default request-response config.";
+  }
+}
+
+async function loadRealtimeDefaults() {
+  try {
+    const response = await fetch("/experiments/realtime/default-config");
+    const config = await response.json();
+    fillRealtimeExperimentForm(config);
+  } catch (error) {
+    realtimeRunJson.textContent = "Could not load default realtime config.";
+  }
+}
+
+async function loadValidationDefaults() {
+  try {
+    const response = await fetch("/experiments/validation/default-config");
+    const config = await response.json();
+    fillValidationExperimentForm(config);
+  } catch (error) {
+    validationRunJson.textContent = "Could not load default validation config.";
+  }
+}
+
+async function loadSerializationDefaults() {
+  try {
+    const response = await fetch("/experiments/serialization/default-config");
+    const config = await response.json();
+    fillSerializationExperimentForm(config);
+  } catch (error) {
+    serializationRunJson.textContent = "Could not load default serialization config.";
+  }
+}
+
+async function runRequestResponseExperiment(event) {
+  event.preventDefault();
+  const payload = buildRequestResponseExperimentPayload(new FormData(requestResponseExperimentForm));
+
+  if (!payload.transports.length) {
+    requestResponseRunSummary.innerHTML =
+      `<div class="summary-card muted">Select at least one transport.</div>`;
+    return;
+  }
+
+  requestResponseRunSummary.innerHTML = `<div class="summary-card muted">Running experiment...</div>`;
+  requestResponseRunJson.textContent = "Running experiment...";
+
+  const response = await fetch("/experiments/request-response/run", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    requestResponseRunSummary.innerHTML = `<div class="summary-card muted">Experiment failed.</div>`;
+    requestResponseRunJson.textContent = JSON.stringify(data, null, 2);
+    requestResponseRunTable.innerHTML = "";
+    return;
+  }
+
+  const setBest = bestRowBy(
+    data.measurements.map((m) => ({ transport: m.transport, avg_ms: m.set_value.summary.avg_ms })),
+    "avg_ms"
+  );
+
+  const getBest = bestRowBy(
+    data.measurements.map((m) => ({ transport: m.transport, avg_ms: m.get_value.summary.avg_ms })),
+    "avg_ms"
+  );
+
+  renderCardGroup(requestResponseRunSummary, [
+    { label: "Iterations", value: String(data.iterations) },
+    { label: "Transports run", value: String(data.transports.length) },
+    { label: "Best set_value", value: `${setBest.transport} (${setBest.avg_ms.toFixed(3)} ms)` },
+    { label: "Best get_value", value: `${getBest.transport} (${getBest.avg_ms.toFixed(3)} ms)` },
+  ]);
+
+  const experimentRows = data.measurements.flatMap((measurement) => [
+    {
+      transport: measurement.transport,
+      operation: "set_value",
+      avg_ms: measurement.set_value.summary.avg_ms,
+      median_ms: measurement.set_value.summary.median_ms,
+      min_ms: measurement.set_value.summary.min_ms,
+      max_ms: measurement.set_value.summary.max_ms,
+    },
+    {
+      transport: measurement.transport,
+      operation: "get_value",
+      avg_ms: measurement.get_value.summary.avg_ms,
+      median_ms: measurement.get_value.summary.median_ms,
+      min_ms: measurement.get_value.summary.min_ms,
+      max_ms: measurement.get_value.summary.max_ms,
+    },
+  ]);
+
+  renderTable(
+    requestResponseRunTable,
+    [
+      { key: "transport", label: "Transport" },
+      { key: "operation", label: "Operation" },
+      { key: "avg_ms", label: "Avg [ms]", render: (row) => row.avg_ms.toFixed(3) },
+      { key: "median_ms", label: "Median [ms]", render: (row) => row.median_ms.toFixed(3) },
+      { key: "min_ms", label: "Min [ms]", render: (row) => row.min_ms.toFixed(3) },
+      { key: "max_ms", label: "Max [ms]", render: (row) => row.max_ms.toFixed(3) },
+    ],
+    experimentRows
+  );
+
+  requestResponseRunJson.textContent = JSON.stringify(data, null, 2);
+}
+
+async function runRealtimeExperiment(event) {
+  event.preventDefault();
+  const payload = buildRealtimeExperimentPayload(new FormData(realtimeExperimentForm));
+
+  if (!payload.transports.length) {
+    realtimeRunSummary.innerHTML =
+      `<div class="summary-card muted">Select at least one transport.</div>`;
+    return;
+  }
+
+  realtimeRunSummary.innerHTML = `<div class="summary-card muted">Running experiment...</div>`;
+  realtimeRunJson.textContent = "Running experiment...";
+
+  const response = await fetch("/experiments/realtime/run", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    realtimeRunSummary.innerHTML = `<div class="summary-card muted">Experiment failed.</div>`;
+    realtimeRunJson.textContent = JSON.stringify(data, null, 2);
+    realtimeRunTable.innerHTML = "";
+    return;
+  }
+
+  const bestNonEmpty = bestRowBy(
+    data.measurements.filter((m) => m.scenario === "non_empty_fetch"),
+    "summary.avg_ms"
+  );
+
+  const bestEmpty = bestRowBy(
+    data.measurements.filter((m) => m.scenario === "empty_fetch"),
+    "summary.avg_ms"
+  );
+
+  renderCardGroup(realtimeRunSummary, [
+    { label: "Iterations", value: String(data.iterations) },
+    { label: "Transports run", value: String(data.transports.length) },
+    { label: "Best non_empty_fetch", value: `${bestNonEmpty.transport} (${bestNonEmpty.summary.avg_ms.toFixed(3)} ms)` },
+    { label: "Best empty_fetch", value: `${bestEmpty.transport} (${bestEmpty.summary.avg_ms.toFixed(3)} ms)` },
+  ]);
+
+  renderTable(
+    realtimeRunTable,
+    [
+      { key: "transport", label: "Transport" },
+      { key: "scenario", label: "Scenario" },
+      { key: "summary.avg_ms", label: "Avg [ms]", render: (row) => row.summary.avg_ms.toFixed(3) },
+      { key: "summary.median_ms", label: "Median [ms]", render: (row) => row.summary.median_ms.toFixed(3) },
+      { key: "summary.min_ms", label: "Min [ms]", render: (row) => row.summary.min_ms.toFixed(3) },
+      { key: "summary.max_ms", label: "Max [ms]", render: (row) => row.summary.max_ms.toFixed(3) },
+      { key: "expected_event_count", label: "Event count", render: (row) => String(row.expected_event_count) },
+    ],
+    data.measurements
+  );
+
+  realtimeRunJson.textContent = JSON.stringify(data, null, 2);
+}
+
+async function runValidationExperiment(event) {
+  event.preventDefault();
+  const payload = buildValidationExperimentPayload(new FormData(validationExperimentForm));
+
+  if (!payload.scenarios.length) {
+    validationRunSummary.innerHTML =
+      `<div class="summary-card muted">Select at least one scenario.</div>`;
+    return;
+  }
+
+  validationRunSummary.innerHTML = `<div class="summary-card muted">Running experiment...</div>`;
+  validationRunJson.textContent = "Running experiment...";
+
+  const response = await fetch("/experiments/validation/run", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    validationRunSummary.innerHTML = `<div class="summary-card muted">Experiment failed.</div>`;
+    validationRunJson.textContent = JSON.stringify(data, null, 2);
+    validationRunTable.innerHTML = "";
+    return;
+  }
+
+  const fastest = bestRowBy(data.measurements, "summary.avg_us");
+  const slowest = worstRowBy(data.measurements, "summary.avg_us");
+
+  renderCardGroup(validationRunSummary, [
+    { label: "Iterations", value: String(data.iterations) },
+    { label: "Scenarios run", value: String(data.scenarios.length) },
+    { label: "Fastest scenario", value: `${fastest.scenario} (${fastest.summary.avg_us.toFixed(3)} us)` },
+    { label: "Slowest scenario", value: `${slowest.scenario} (${slowest.summary.avg_us.toFixed(3)} us)` },
+  ]);
+
+  renderTable(
+    validationRunTable,
+    [
+      { key: "scenario", label: "Scenario" },
+      { key: "expected_outcome", label: "Expected outcome" },
+      { key: "summary.avg_us", label: "Avg [us]", render: (row) => row.summary.avg_us.toFixed(3) },
+      { key: "summary.median_us", label: "Median [us]", render: (row) => row.summary.median_us.toFixed(3) },
+      { key: "summary.min_us", label: "Min [us]", render: (row) => row.summary.min_us.toFixed(3) },
+      { key: "summary.max_us", label: "Max [us]", render: (row) => row.summary.max_us.toFixed(3) },
+    ],
+    data.measurements
+  );
+
+  validationRunJson.textContent = JSON.stringify(data, null, 2);
+}
+
+async function runSerializationExperiment(event) {
+  event.preventDefault();
+  const payload = buildSerializationExperimentPayload(new FormData(serializationExperimentForm));
+
+  if (!payload.transports.length) {
+    serializationRunSummary.innerHTML =
+      `<div class="summary-card muted">Select at least one transport.</div>`;
+    return;
+  }
+
+  if (!payload.operations.length) {
+    serializationRunSummary.innerHTML =
+      `<div class="summary-card muted">Select at least one operation.</div>`;
+    return;
+  }
+
+  serializationRunSummary.innerHTML = `<div class="summary-card muted">Running experiment...</div>`;
+  serializationRunJson.textContent = "Running experiment...";
+
+  const response = await fetch("/experiments/serialization/run", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    serializationRunSummary.innerHTML = `<div class="summary-card muted">Experiment failed.</div>`;
+    serializationRunJson.textContent = JSON.stringify(data, null, 2);
+    serializationRunTable.innerHTML = "";
+    return;
+  }
+
+  const smallestRequest = bestRowBy(data.measurements, "request_size_bytes");
+  const smallestResponse = bestRowBy(data.measurements, "response_size_bytes");
+  const fastestSerialize = bestRowBy(data.measurements, "request_serialize_summary.avg_us");
+  const fastestDeserialize = bestRowBy(data.measurements, "response_deserialize_summary.avg_us");
+
+  renderCardGroup(serializationRunSummary, [
+    { label: "Iterations", value: String(data.iterations) },
+    { label: "Measurements", value: String(data.measurements.length) },
+    { label: "Smallest request", value: `${smallestRequest.transport}/${smallestRequest.operation} (${smallestRequest.request_size_bytes} B)` },
+    { label: "Fastest request serialize", value: `${fastestSerialize.transport}/${fastestSerialize.operation} (${fastestSerialize.request_serialize_summary.avg_us.toFixed(3)} us)` },
+    { label: "Smallest response", value: `${smallestResponse.transport}/${smallestResponse.operation} (${smallestResponse.response_size_bytes} B)` },
+    { label: "Fastest response deserialize", value: `${fastestDeserialize.transport}/${fastestDeserialize.operation} (${fastestDeserialize.response_deserialize_summary.avg_us.toFixed(3)} us)` },
+  ]);
+
+  renderTable(
+    serializationRunTable,
+    [
+      { key: "transport", label: "Transport" },
+      { key: "operation", label: "Operation" },
+      { key: "encoding", label: "Encoding" },
+      { key: "request_size_bytes", label: "Request [B]" },
+      { key: "response_size_bytes", label: "Response [B]" },
+      { key: "request_serialize_summary.avg_us", label: "Req serialize [us]", render: (row) => row.request_serialize_summary.avg_us.toFixed(3) },
+      { key: "request_deserialize_summary.avg_us", label: "Req deserialize [us]", render: (row) => row.request_deserialize_summary.avg_us.toFixed(3) },
+      { key: "response_serialize_summary.avg_us", label: "Resp serialize [us]", render: (row) => row.response_serialize_summary.avg_us.toFixed(3) },
+      { key: "response_deserialize_summary.avg_us", label: "Resp deserialize [us]", render: (row) => row.response_deserialize_summary.avg_us.toFixed(3) },
+    ],
+    data.measurements
+  );
+
+  serializationRunJson.textContent = JSON.stringify(data, null, 2);
 }
 
 async function loadReportsDashboard() {
@@ -327,79 +790,31 @@ async function loadReportsDashboard() {
     const slowestValidation = worstRowBy(validation, "avg_us");
 
     renderCardGroup(insightsCards, [
-      {
-        label: "Best set_value transport",
-        value: `${bestSet.transport} (${bestSet.avg_ms.toFixed(3)} ms)`,
-      },
-      {
-        label: "Best get_value transport",
-        value: `${bestGet.transport} (${bestGet.avg_ms.toFixed(3)} ms)`,
-      },
-      {
-        label: "Best realtime scenario result",
-        value: `${bestRealtime.transport} (${bestRealtime.avg_ms.toFixed(3)} ms)`,
-      },
-      {
-        label: "Smallest request payload",
-        value: `${smallestPayload.transport}/${smallestPayload.operation}`,
-      },
+      { label: "Best set_value transport", value: `${bestSet.transport} (${bestSet.avg_ms.toFixed(3)} ms)` },
+      { label: "Best get_value transport", value: `${bestGet.transport} (${bestGet.avg_ms.toFixed(3)} ms)` },
+      { label: "Best realtime scenario result", value: `${bestRealtime.transport} (${bestRealtime.avg_ms.toFixed(3)} ms)` },
+      { label: "Smallest request payload", value: `${smallestPayload.transport}/${smallestPayload.operation}` },
     ]);
 
     renderCardGroup(transportSummaryCards, [
-      {
-        label: "set_value best avg [ms]",
-        value: Math.min(...requestResponse.filter((r) => r.operation === "set_value").map((r) => r.avg_ms)).toFixed(3),
-      },
-      {
-        label: "get_value best avg [ms]",
-        value: Math.min(...requestResponse.filter((r) => r.operation === "get_value").map((r) => r.avg_ms)).toFixed(3),
-      },
-      {
-        label: "Rows loaded",
-        value: String(requestResponse.length),
-      },
-      {
-        label: "Transports",
-        value: Array.from(new Set(requestResponse.map((r) => r.transport))).join(", "),
-      },
+      { label: "set_value best avg [ms]", value: Math.min(...requestResponse.filter((r) => r.operation === "set_value").map((r) => r.avg_ms)).toFixed(3) },
+      { label: "get_value best avg [ms]", value: Math.min(...requestResponse.filter((r) => r.operation === "get_value").map((r) => r.avg_ms)).toFixed(3) },
+      { label: "Rows loaded", value: String(requestResponse.length) },
+      { label: "Transports", value: Array.from(new Set(requestResponse.map((r) => r.transport))).join(", ") },
     ]);
 
     renderCardGroup(realtimeSummaryCards, [
-      {
-        label: "non_empty_fetch best avg [ms]",
-        value: Math.min(...realtime.filter((r) => r.scenario === "non_empty_fetch").map((r) => r.avg_ms)).toFixed(3),
-      },
-      {
-        label: "empty_fetch best avg [ms]",
-        value: Math.min(...realtime.filter((r) => r.scenario === "empty_fetch").map((r) => r.avg_ms)).toFixed(3),
-      },
-      {
-        label: "Rows loaded",
-        value: String(realtime.length),
-      },
-      {
-        label: "Expected event counts",
-        value: Array.from(new Set(realtime.map((r) => r.expected_event_count))).join(", "),
-      },
+      { label: "non_empty_fetch best avg [ms]", value: Math.min(...realtime.filter((r) => r.scenario === "non_empty_fetch").map((r) => r.avg_ms)).toFixed(3) },
+      { label: "empty_fetch best avg [ms]", value: Math.min(...realtime.filter((r) => r.scenario === "empty_fetch").map((r) => r.avg_ms)).toFixed(3) },
+      { label: "Rows loaded", value: String(realtime.length) },
+      { label: "Expected event counts", value: Array.from(new Set(realtime.map((r) => r.expected_event_count))).join(", ") },
     ]);
 
     renderCardGroup(validationSummaryCards, [
-      {
-        label: "Fastest validation avg [us]",
-        value: fastestValidation.avg_us.toFixed(3),
-      },
-      {
-        label: "Slowest validation avg [us]",
-        value: slowestValidation.avg_us.toFixed(3),
-      },
-      {
-        label: "Scenarios loaded",
-        value: String(validation.length),
-      },
-      {
-        label: "Fastest scenario",
-        value: fastestValidation.scenario,
-      },
+      { label: "Fastest validation avg [us]", value: fastestValidation.avg_us.toFixed(3) },
+      { label: "Slowest validation avg [us]", value: slowestValidation.avg_us.toFixed(3) },
+      { label: "Scenarios loaded", value: String(validation.length) },
+      { label: "Fastest scenario", value: fastestValidation.scenario },
     ]);
 
     renderTable(
@@ -478,7 +893,23 @@ navOverhead.addEventListener("click", () => setMainView("overhead"));
 navTransport.addEventListener("click", () => setMainView("transport"));
 loadReportButton.addEventListener("click", loadSelectedReport);
 
+requestResponseExperimentForm.addEventListener("submit", runRequestResponseExperiment);
+loadRequestResponseDefaultsButton.addEventListener("click", loadRequestResponseDefaults);
+
+realtimeExperimentForm.addEventListener("submit", runRealtimeExperiment);
+loadRealtimeDefaultsButton.addEventListener("click", loadRealtimeDefaults);
+
+validationExperimentForm.addEventListener("submit", runValidationExperiment);
+loadValidationDefaultsButton.addEventListener("click", loadValidationDefaults);
+
+serializationExperimentForm.addEventListener("submit", runSerializationExperiment);
+loadSerializationDefaultsButton.addEventListener("click", loadSerializationDefaults);
+
 setMode("single");
 setMainView("overhead");
 checkHealth();
 loadPresets();
+loadRequestResponseDefaults();
+loadRealtimeDefaults();
+loadValidationDefaults();
+loadSerializationDefaults();
