@@ -71,6 +71,16 @@
                 </label>
 
                 <label>
+                  Transmission profile
+                  <select name="transmission_profile">
+                    <option value="standard_ethernet">standard_ethernet</option>
+                    <option value="constrained_mtu">constrained_mtu</option>
+                    <option value="tcp_options_heavy">tcp_options_heavy</option>
+                    <option value="jumbo_frame">jumbo_frame</option>
+                  </select>
+                </label>
+
+                <label>
                   Payload size [bytes]
                   <input type="number" name="payload_size_bytes" value="10" min="1" />
                 </label>
@@ -91,9 +101,43 @@
                   />
                 </label>
 
+                <div class="checkbox-group wide">
+                  <span class="checkbox-group-title">Advanced transmission settings</span>
+                </div>
+
                 <label>
                   MTU [bytes]
-                  <input type="number" name="mtu_bytes" value="1500" min="68" />
+                  <input type="number" name="mtu_bytes" placeholder="auto from profile" min="68" />
+                </label>
+
+                <label>
+                  Application header overhead [bytes]
+                  <input type="number" name="application_header_overhead_bytes" placeholder="auto from protocol" min="0" />
+                </label>
+
+                <label>
+                  Ethernet header [bytes]
+                  <input type="number" name="ethernet_header_size_bytes" placeholder="auto" min="0" />
+                </label>
+
+                <label>
+                  Ethernet trailer [bytes]
+                  <input type="number" name="ethernet_trailer_size_bytes" placeholder="auto" min="0" />
+                </label>
+
+                <label>
+                  Ethernet minimum payload [bytes]
+                  <input type="number" name="ethernet_min_payload_bytes" placeholder="auto" min="0" />
+                </label>
+
+                <label>
+                  IPv4 header [bytes]
+                  <input type="number" name="ipv4_header_size_bytes" placeholder="auto" min="0" />
+                </label>
+
+                <label>
+                  TCP header [bytes]
+                  <input type="number" name="tcp_header_size_bytes" placeholder="auto" min="0" />
                 </label>
 
                 <button type="submit" class="primary-button">
@@ -131,6 +175,16 @@
                 </label>
 
                 <label>
+                  Transmission profile
+                  <select name="transmission_profile">
+                    <option value="standard_ethernet">standard_ethernet</option>
+                    <option value="constrained_mtu">constrained_mtu</option>
+                    <option value="tcp_options_heavy">tcp_options_heavy</option>
+                    <option value="jumbo_frame">jumbo_frame</option>
+                  </select>
+                </label>
+
+                <label>
                   Aggregation mode
                   <select name="aggregation_mode">
                     <option value="per_message">per_message</option>
@@ -155,9 +209,43 @@
                   />
                 </label>
 
+                <div class="checkbox-group wide">
+                  <span class="checkbox-group-title">Advanced transmission settings</span>
+                </div>
+
                 <label>
                   MTU [bytes]
-                  <input type="number" name="mtu_bytes" value="1500" min="68" />
+                  <input type="number" name="mtu_bytes" placeholder="auto from profile" min="68" />
+                </label>
+
+                <label>
+                  Application header overhead [bytes]
+                  <input type="number" name="application_header_overhead_bytes" placeholder="auto from protocol" min="0" />
+                </label>
+
+                <label>
+                  Ethernet header [bytes]
+                  <input type="number" name="ethernet_header_size_bytes" placeholder="auto" min="0" />
+                </label>
+
+                <label>
+                  Ethernet trailer [bytes]
+                  <input type="number" name="ethernet_trailer_size_bytes" placeholder="auto" min="0" />
+                </label>
+
+                <label>
+                  Ethernet minimum payload [bytes]
+                  <input type="number" name="ethernet_min_payload_bytes" placeholder="auto" min="0" />
+                </label>
+
+                <label>
+                  IPv4 header [bytes]
+                  <input type="number" name="ipv4_header_size_bytes" placeholder="auto" min="0" />
+                </label>
+
+                <label>
+                  TCP header [bytes]
+                  <input type="number" name="tcp_header_size_bytes" placeholder="auto" min="0" />
                 </label>
 
                 <button type="submit" class="primary-button">
@@ -175,12 +263,93 @@
           </section>
 
           <section class="panel">
+            <h3>Effective transmission settings</h3>
+            <div id="effective-settings-box" class="summary-grid">
+              <div class="summary-card muted">Run analysis to see effective settings.</div>
+            </div>
+          </section>
+
+          <section class="panel">
             <h3>Detailed result</h3>
             <pre id="result-json" class="result-box">No result yet.</pre>
           </section>
         </section>
 
         <section id="view-transport" class="hidden">
+         <section class="panel">
+          <h3>Environment status</h3>
+          <form id="environment-status-form" class="form-grid">
+            <label>
+              HTTP health URL
+              <input
+                type="text"
+                name="http_health_url"
+                value="http://127.0.0.1:8000/health"
+              />
+            </label>
+
+            <label>
+              WebSocket health URL
+              <input
+                type="text"
+                name="ws_health_url"
+                value="http://127.0.0.1:8001/health"
+              />
+            </label>
+
+            <label>
+              gRPC address
+              <input
+                type="text"
+                name="grpc_address"
+                value="127.0.0.1:50051"
+              />
+            </label>
+
+            <label>
+              Timeout [s]
+              <input
+                type="number"
+                name="timeout_seconds"
+                value="2"
+                min="0.1"
+                max="10"
+                step="0.1"
+              />
+            </label>
+
+            <div class="form-actions wide">
+              <button
+                type="button"
+                id="load-environment-defaults"
+                class="primary-button secondary-button"
+              >
+                Load default config
+              </button>
+              <button
+                type="submit"
+                id="refresh-environment-status"
+                class="primary-button"
+              >
+                Refresh status
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel">
+          <h3>Environment summary</h3>
+          <div id="environment-status-summary" class="summary-grid">
+            <div class="summary-card muted">Refresh environment status to see results.</div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h3>Environment services</h3>
+          <div id="environment-status-table">
+            <div class="summary-card muted">Refresh environment status to see service details.</div>
+          </div>
+        </section>
           <section class="panel">
             <h3>Run request-response experiment</h3>
             <form id="request-response-experiment-form" class="form-grid">

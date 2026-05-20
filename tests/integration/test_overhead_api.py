@@ -13,7 +13,7 @@ def test_overhead_api_health_returns_ok():
     assert response.json() == {"status": "ok"}
 
 
-def test_overhead_api_presets_returns_layer_and_protocol_presets():
+def test_overhead_api_presets_returns_layer_protocol_and_profile_presets():
     response = client.get("/presets")
 
     assert response.status_code == 200
@@ -21,6 +21,7 @@ def test_overhead_api_presets_returns_layer_and_protocol_presets():
     data = response.json()
     assert "layer_presets" in data
     assert "protocol_presets" in data
+    assert "transmission_profiles" in data
 
     assert "ethernet" in data["layer_presets"]
     assert "ipv4" in data["layer_presets"]
@@ -30,6 +31,11 @@ def test_overhead_api_presets_returns_layer_and_protocol_presets():
     assert "websocket" in data["protocol_presets"]
     assert "grpc" in data["protocol_presets"]
 
+    assert "standard_ethernet" in data["transmission_profiles"]
+    assert "constrained_mtu" in data["transmission_profiles"]
+    assert "tcp_options_heavy" in data["transmission_profiles"]
+    assert "jumbo_frame" in data["transmission_profiles"]
+
 
 def test_analyze_single_returns_valid_result():
     payload = {
@@ -38,7 +44,7 @@ def test_analyze_single_returns_valid_result():
         "payload_size_bytes": 10,
         "message_count": 1,
         "message_frequency_hz": 100.0,
-        "mtu_bytes": 1500,
+        "transmission_profile": "standard_ethernet",
     }
 
     response = client.post("/analyze/single", json=payload)
@@ -51,6 +57,28 @@ def test_analyze_single_returns_valid_result():
     assert data["layer_breakdown"]["total_transmitted_bytes"] > 10
     assert data["frame_analysis"]["frame_count"] >= 1
     assert data["efficiency"]["required_bitrate_kbps"] > 0
+    assert data["effective_settings"]["transmission_profile"] == "standard_ethernet"
+
+
+def test_analyze_single_accepts_manual_layer_overrides():
+    payload = {
+        "application_protocol": "grpc",
+        "payload_encoding": "protobuf",
+        "payload_size_bytes": 500,
+        "transmission_profile": "standard_ethernet",
+        "tcp_header_size_bytes": 40,
+        "ipv4_header_size_bytes": 24,
+        "ethernet_min_payload_bytes": 64,
+    }
+
+    response = client.post("/analyze/single", json=payload)
+
+    assert response.status_code == 200
+
+    data = response.json()
+    assert data["effective_settings"]["tcp_header_size_bytes"] == 40
+    assert data["effective_settings"]["ipv4_header_size_bytes"] == 24
+    assert data["effective_settings"]["ethernet_min_payload_bytes"] == 64
 
 
 def test_analyze_single_detects_fragmentation_for_large_payload():
@@ -60,7 +88,7 @@ def test_analyze_single_detects_fragmentation_for_large_payload():
         "payload_size_bytes": 5000,
         "message_count": 1,
         "message_frequency_hz": 10.0,
-        "mtu_bytes": 1500,
+        "transmission_profile": "standard_ethernet",
     }
 
     response = client.post("/analyze/single", json=payload)
@@ -80,7 +108,7 @@ def test_analyze_sequence_returns_valid_result():
         "aggregation_mode": "batched",
         "batch_size": 3,
         "message_frequency_hz": 100.0,
-        "mtu_bytes": 1500,
+        "transmission_profile": "standard_ethernet",
     }
 
     response = client.post("/analyze/sequence", json=payload)
@@ -93,6 +121,7 @@ def test_analyze_sequence_returns_valid_result():
     assert data["total_transmitted_bytes"] > 0
     assert data["total_frame_count"] >= 1
     assert len(data["aggregated_units"]) == 2
+    assert data["effective_settings"]["transmission_profile"] == "standard_ethernet"
 
 
 def test_analyze_sequence_rejects_invalid_payload_sizes():
@@ -103,7 +132,7 @@ def test_analyze_sequence_rejects_invalid_payload_sizes():
         "aggregation_mode": "per_message",
         "batch_size": 1,
         "message_frequency_hz": 100.0,
-        "mtu_bytes": 1500,
+        "transmission_profile": "standard_ethernet",
     }
 
     response = client.post("/analyze/sequence", json=payload)

@@ -39,6 +39,24 @@ class TrafficDirection(str, Enum):
     BIDIRECTIONAL = "bidirectional"
 
 
+class TransmissionProfile(str, Enum):
+    STANDARD_ETHERNET = "standard_ethernet"
+    CONSTRAINED_MTU = "constrained_mtu"
+    TCP_OPTIONS_HEAVY = "tcp_options_heavy"
+    JUMBO_FRAME = "jumbo_frame"
+
+
+class EffectiveTransmissionSettings(BaseModel):
+    transmission_profile: TransmissionProfile
+    mtu_bytes: int
+    ethernet_header_size_bytes: int
+    ethernet_trailer_size_bytes: int
+    ethernet_min_payload_bytes: int
+    ipv4_header_size_bytes: int
+    tcp_header_size_bytes: int
+    application_header_overhead_bytes: int
+
+
 class TransmissionAnalysisInput(BaseModel):
     application_protocol: ApplicationProtocol
     payload_encoding: PayloadEncoding
@@ -46,6 +64,8 @@ class TransmissionAnalysisInput(BaseModel):
     link_layer: LinkLayer = LinkLayer.ETHERNET
     network_layer: NetworkLayer = NetworkLayer.IPV4
     transport_layer: TransportLayer = TransportLayer.TCP
+
+    transmission_profile: TransmissionProfile = TransmissionProfile.STANDARD_ETHERNET
 
     payload_size_bytes: int = Field(..., ge=1)
     message_count: int = Field(default=1, ge=1)
@@ -55,10 +75,15 @@ class TransmissionAnalysisInput(BaseModel):
     aggregation_mode: AggregationMode = AggregationMode.PER_MESSAGE
     traffic_direction: TrafficDirection = TrafficDirection.REQUEST
 
-    mtu_bytes: int = Field(default=1500, ge=68)
+    mtu_bytes: Optional[int] = Field(default=None, ge=68)
     nagle_enabled: bool = False
 
     application_header_overhead_bytes: Optional[int] = Field(default=None, ge=0)
+    ethernet_header_size_bytes: Optional[int] = Field(default=None, ge=0)
+    ethernet_trailer_size_bytes: Optional[int] = Field(default=None, ge=0)
+    ethernet_min_payload_bytes: Optional[int] = Field(default=None, ge=0)
+    ipv4_header_size_bytes: Optional[int] = Field(default=None, ge=0)
+    tcp_header_size_bytes: Optional[int] = Field(default=None, ge=0)
 
     @field_validator("batch_size")
     @classmethod
@@ -69,8 +94,8 @@ class TransmissionAnalysisInput(BaseModel):
 
     @field_validator("mtu_bytes")
     @classmethod
-    def validate_mtu_bytes(cls, value: int) -> int:
-        if value < 68:
+    def validate_mtu_bytes(cls, value: Optional[int]) -> Optional[int]:
+        if value is not None and value < 68:
             raise ValueError("mtu_bytes must be at least 68 bytes for IPv4")
         return value
 
@@ -105,6 +130,7 @@ class EfficiencyAnalysis(BaseModel):
 
 class TransmissionAnalysisResult(BaseModel):
     input_summary: TransmissionAnalysisInput
+    effective_settings: EffectiveTransmissionSettings
     serialized_payload_size_bytes: int
     total_sequence_payload_bytes: int
     total_sequence_transmitted_bytes: int
@@ -118,12 +144,18 @@ class TransmissionAnalysisResult(BaseModel):
 class SequencePatternInput(BaseModel):
     application_protocol: ApplicationProtocol
     payload_encoding: PayloadEncoding
+    transmission_profile: TransmissionProfile = TransmissionProfile.STANDARD_ETHERNET
     payload_sizes_bytes: list[int] = Field(..., min_length=1)
     message_frequency_hz: float = Field(default=1.0, gt=0)
     aggregation_mode: AggregationMode = AggregationMode.PER_MESSAGE
     batch_size: int = Field(default=1, ge=1)
-    mtu_bytes: int = Field(default=1500, ge=68)
+    mtu_bytes: Optional[int] = Field(default=None, ge=68)
     application_header_overhead_bytes: Optional[int] = Field(default=None, ge=0)
+    ethernet_header_size_bytes: Optional[int] = Field(default=None, ge=0)
+    ethernet_trailer_size_bytes: Optional[int] = Field(default=None, ge=0)
+    ethernet_min_payload_bytes: Optional[int] = Field(default=None, ge=0)
+    ipv4_header_size_bytes: Optional[int] = Field(default=None, ge=0)
+    tcp_header_size_bytes: Optional[int] = Field(default=None, ge=0)
 
     @field_validator("payload_sizes_bytes")
     @classmethod
@@ -131,6 +163,13 @@ class SequencePatternInput(BaseModel):
         if any(v < 1 for v in values):
             raise ValueError("all payload sizes must be greater than 0")
         return values
+
+    @field_validator("mtu_bytes")
+    @classmethod
+    def validate_sequence_mtu_bytes(cls, value: Optional[int]) -> Optional[int]:
+        if value is not None and value < 68:
+            raise ValueError("mtu_bytes must be at least 68 bytes for IPv4")
+        return value
 
 
 class AggregatedTransmissionUnit(BaseModel):
@@ -145,6 +184,7 @@ class AggregatedTransmissionUnit(BaseModel):
 
 class SequenceTransmissionAnalysisResult(BaseModel):
     input_summary: SequencePatternInput
+    effective_settings: EffectiveTransmissionSettings
     original_message_count: int = Field(..., ge=1)
     aggregated_message_count: int = Field(..., ge=1)
     total_original_payload_bytes: int = Field(..., ge=1)

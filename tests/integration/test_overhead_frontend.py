@@ -24,6 +24,13 @@ def test_frontend_root_returns_html():
     assert "Last validation experiment summary" in response.text
     assert "Run serialization experiment" in response.text
     assert "Last serialization experiment summary" in response.text
+    assert "Transmission profile" in response.text
+    assert "Advanced transmission settings" in response.text
+    assert "Effective transmission settings" in response.text
+    assert "Environment status" in response.text
+    assert "Environment summary" in response.text
+    assert "Environment services" in response.text
+    assert "Refresh status" in response.text
 
 
 def test_frontend_static_css_is_served():

@@ -51,6 +51,11 @@ const validationTable = document.getElementById("validation-table");
 const reportSelect = document.getElementById("report-select");
 const loadReportButton = document.getElementById("load-report-button");
 const reportViewer = document.getElementById("report-viewer");
+const effectiveSettingsBox = document.getElementById("effective-settings-box");
+const environmentStatusForm = document.getElementById("environment-status-form");
+const loadEnvironmentDefaultsButton = document.getElementById("load-environment-defaults");
+const environmentStatusSummary = document.getElementById("environment-status-summary");
+const environmentStatusTable = document.getElementById("environment-status-table");
 
 function setMode(mode) {
   const singleActive = mode === "single";
@@ -103,6 +108,15 @@ function renderCardGroup(container, cards) {
     `;
     container.appendChild(div);
   }
+}
+
+function buildEnvironmentStatusPayload(formData) {
+  return {
+    http_health_url: formData.get("http_health_url"),
+    ws_health_url: formData.get("ws_health_url"),
+    grpc_address: formData.get("grpc_address"),
+    timeout_seconds: Number(formData.get("timeout_seconds")),
+  };
 }
 
 function renderResult(data) {
@@ -176,6 +190,13 @@ async function loadPresets() {
     const response = await fetch("/presets");
     const data = await response.json();
 
+    const profileItems = Object.entries(data.transmission_profiles)
+      .map(
+        ([key, value]) =>
+          `<li>${key}: MTU ${value.mtu_bytes}, IPv4 ${value.ipv4_header_size_bytes}B, TCP ${value.tcp_header_size_bytes}B</li>`
+      )
+      .join("");
+
     presetsContent.innerHTML = `
       <strong>Layers</strong>
       <ul class="preset-list">
@@ -189,6 +210,10 @@ async function loadPresets() {
         <li>WebSocket: ${data.protocol_presets.websocket.default_header_overhead_bytes}B</li>
         <li>gRPC: ${data.protocol_presets.grpc.default_header_overhead_bytes}B</li>
       </ul>
+      <strong>Transmission profiles</strong>
+      <ul class="preset-list">
+        ${profileItems}
+      </ul>
     `;
   } catch (error) {
     presetsContent.textContent = "Could not load presets.";
@@ -196,14 +221,48 @@ async function loadPresets() {
 }
 
 function buildSinglePayload(formData) {
-  return {
+  const payload = {
     application_protocol: formData.get("application_protocol"),
     payload_encoding: formData.get("payload_encoding"),
+    transmission_profile: formData.get("transmission_profile"),
     payload_size_bytes: Number(formData.get("payload_size_bytes")),
     message_count: Number(formData.get("message_count")),
     message_frequency_hz: Number(formData.get("message_frequency_hz")),
-    mtu_bytes: Number(formData.get("mtu_bytes")),
   };
+
+  appendOptionalNumber(payload, "mtu_bytes", formData.get("mtu_bytes"));
+  appendOptionalNumber(
+    payload,
+    "application_header_overhead_bytes",
+    formData.get("application_header_overhead_bytes")
+  );
+  appendOptionalNumber(
+    payload,
+    "ethernet_header_size_bytes",
+    formData.get("ethernet_header_size_bytes")
+  );
+  appendOptionalNumber(
+    payload,
+    "ethernet_trailer_size_bytes",
+    formData.get("ethernet_trailer_size_bytes")
+  );
+  appendOptionalNumber(
+    payload,
+    "ethernet_min_payload_bytes",
+    formData.get("ethernet_min_payload_bytes")
+  );
+  appendOptionalNumber(
+    payload,
+    "ipv4_header_size_bytes",
+    formData.get("ipv4_header_size_bytes")
+  );
+  appendOptionalNumber(
+    payload,
+    "tcp_header_size_bytes",
+    formData.get("tcp_header_size_bytes")
+  );
+
+  return payload;
 }
 
 function buildSequencePayload(formData) {
@@ -213,15 +272,91 @@ function buildSequencePayload(formData) {
     .map((item) => Number(item.trim()))
     .filter((item) => !Number.isNaN(item));
 
-  return {
+  const payload = {
     application_protocol: formData.get("application_protocol"),
     payload_encoding: formData.get("payload_encoding"),
+    transmission_profile: formData.get("transmission_profile"),
     payload_sizes_bytes: payloadSizes,
     aggregation_mode: formData.get("aggregation_mode"),
     batch_size: Number(formData.get("batch_size")),
     message_frequency_hz: Number(formData.get("message_frequency_hz")),
-    mtu_bytes: Number(formData.get("mtu_bytes")),
   };
+
+  appendOptionalNumber(payload, "mtu_bytes", formData.get("mtu_bytes"));
+  appendOptionalNumber(
+    payload,
+    "application_header_overhead_bytes",
+    formData.get("application_header_overhead_bytes")
+  );
+  appendOptionalNumber(
+    payload,
+    "ethernet_header_size_bytes",
+    formData.get("ethernet_header_size_bytes")
+  );
+  appendOptionalNumber(
+    payload,
+    "ethernet_trailer_size_bytes",
+    formData.get("ethernet_trailer_size_bytes")
+  );
+  appendOptionalNumber(
+    payload,
+    "ethernet_min_payload_bytes",
+    formData.get("ethernet_min_payload_bytes")
+  );
+  appendOptionalNumber(
+    payload,
+    "ipv4_header_size_bytes",
+    formData.get("ipv4_header_size_bytes")
+  );
+  appendOptionalNumber(
+    payload,
+    "tcp_header_size_bytes",
+    formData.get("tcp_header_size_bytes")
+  );
+
+  return payload;
+}
+
+function parseOptionalNumber(value) {
+  if (value === null || value === undefined) {
+    return undefined;
+  }
+
+  const normalized = String(value).trim();
+  if (normalized === "") {
+    return undefined;
+  }
+
+  const parsed = Number(normalized);
+  return Number.isNaN(parsed) ? undefined : parsed;
+}
+
+function appendOptionalNumber(target, key, value) {
+  const parsed = parseOptionalNumber(value);
+  if (parsed !== undefined) {
+    target[key] = parsed;
+  }
+}
+
+function renderEffectiveSettings(data) {
+  if (!data.effective_settings) {
+    effectiveSettingsBox.innerHTML =
+      `<div class="summary-card muted">No effective settings available.</div>`;
+    return;
+  }
+
+  const settings = data.effective_settings;
+
+  renderCardGroup(effectiveSettingsBox, [
+    { label: "Profile", value: settings.transmission_profile },
+    { label: "MTU [B]", value: String(settings.mtu_bytes) },
+    { label: "Ethernet header [B]", value: String(settings.ethernet_header_size_bytes) },
+    { label: "Ethernet trailer [B]", value: String(settings.ethernet_trailer_size_bytes) },
+    { label: "Ethernet minimum payload [B]", value: String(settings.ethernet_min_payload_bytes) },
+    { label: "IPv4 header [B]", value: String(settings.ipv4_header_size_bytes) },
+    { label: "TCP header [B]", value: String(settings.tcp_header_size_bytes) },
+    { label: "App header overhead [B]", value: String(settings.application_header_overhead_bytes) },
+  ]);
 }
 
 function getSelectedRequestResponseTransports() {
@@ -336,6 +471,8 @@ async function analyzeSingle(event) {
 
   if (!response.ok) {
     renderSummary([{ label: "Error", value: "Request failed" }]);
+    effectiveSettingsBox.innerHTML =
+      `<div class="summary-card muted">Could not resolve effective settings.</div>`;
     renderResult(data);
     return;
   }
@@ -347,6 +484,7 @@ async function analyzeSingle(event) {
     { label: "Required bitrate [kbps]", value: data.efficiency.required_bitrate_kbps.toFixed(4) },
   ]);
 
+  renderEffectiveSettings(data);
   renderResult(data);
 }
 
@@ -364,6 +502,8 @@ async function analyzeSequence(event) {
 
   if (!response.ok) {
     renderSummary([{ label: "Error", value: "Request failed" }]);
+    effectiveSettingsBox.innerHTML =
+      `<div class="summary-card muted">Could not resolve effective settings.</div>`;
     renderResult(data);
     return;
   }
@@ -375,6 +515,7 @@ async function analyzeSequence(event) {
     { label: "Payload efficiency", value: data.payload_efficiency_ratio.toFixed(4) },
   ]);
 
+  renderEffectiveSettings(data);
   renderResult(data);
 }
 
@@ -384,6 +525,17 @@ async function fetchReport(key) {
     throw new Error(`Failed to fetch report: ${key}`);
   }
   return await response.json();
+}
+
+function fillEnvironmentStatusForm(config) {
+  environmentStatusForm.querySelector('input[name="http_health_url"]').value =
+    config.http_health_url;
+  environmentStatusForm.querySelector('input[name="ws_health_url"]').value =
+    config.ws_health_url;
+  environmentStatusForm.querySelector('input[name="grpc_address"]').value =
+    config.grpc_address;
+  environmentStatusForm.querySelector('input[name="timeout_seconds"]').value =
+    config.timeout_seconds;
 }
 
 function fillRequestResponseExperimentForm(config) {
@@ -473,6 +625,100 @@ async function loadRealtimeDefaults() {
     fillRealtimeExperimentForm(config);
   } catch (error) {
     realtimeRunJson.textContent = "Could not load default realtime config.";
+  }
+}
+
+async function loadEnvironmentDefaults() {
+  try {
+    const response = await fetch("/environment/services/default-config");
+    const config = await response.json();
+    fillEnvironmentStatusForm(config);
+  } catch (error) {
+    environmentStatusSummary.innerHTML =
+      `<div class="summary-card muted">Could not load environment defaults.</div>`;
+  }
+}
+
+async function refreshEnvironmentStatus(event = null) {
+  if (event) {
+    event.preventDefault();
+  }
+
+  environmentStatusSummary.innerHTML =
+    `<div class="summary-card muted">Checking environment...</div>`;
+  environmentStatusTable.innerHTML = "";
+
+  const payload = buildEnvironmentStatusPayload(
+    new FormData(environmentStatusForm)
+  );
+
+  try {
+    const response = await fetch("/environment/services/status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      environmentStatusSummary.innerHTML =
+        `<div class="summary-card muted">Environment status check failed.</div>`;
+      environmentStatusTable.innerHTML =
+        `<div class="summary-card muted">${JSON.stringify(data)}</div>`;
+      return;
+    }
+
+    const availableCount = data.services.filter((service) => service.available).length;
+
+    renderCardGroup(environmentStatusSummary, [
+      {
+        label: "Overall status",
+        value: data.all_available ? "all available" : "degraded",
+      },
+      {
+        label: "Available services",
+        value: `${availableCount}/${data.services.length}`,
+      },
+      {
+        label: "Timeout [s]",
+        value: String(data.config.timeout_seconds),
+      },
+      {
+        label: "Checked at",
+        value: data.checked_at,
+      },
+    ]);
+
+    renderTable(
+      environmentStatusTable,
+      [
+        { key: "service_name", label: "Service" },
+        {
+          key: "available",
+          label: "Available",
+          render: (row) =>
+            row.available
+              ? `<span class="report-ok">yes</span>`
+              : `<span class="report-missing">no</span>`,
+        },
+        {
+          key: "response_time_ms",
+          label: "Response time [ms]",
+          render: (row) =>
+            row.response_time_ms === null
+              ? "-"
+              : Number(row.response_time_ms).toFixed(3),
+        },
+        { key: "detail", label: "Detail" },
+      ],
+      data.services
+    );
+  } catch (error) {
+    environmentStatusSummary.innerHTML =
+      `<div class="summary-card muted">Could not refresh environment status.</div>`;
+    environmentStatusTable.innerHTML =
+      `<div class="summary-card muted">${error}</div>`;
   }
 }
 
@@ -896,6 +1142,9 @@ loadReportButton.addEventListener("click", loadSelectedReport);
 requestResponseExperimentForm.addEventListener("submit", runRequestResponseExperiment);
 loadRequestResponseDefaultsButton.addEventListener("click", loadRequestResponseDefaults);
 
+environmentStatusForm.addEventListener("submit", refreshEnvironmentStatus);
+loadEnvironmentDefaultsButton.addEventListener("click", loadEnvironmentDefaults);
+
 realtimeExperimentForm.addEventListener("submit", runRealtimeExperiment);
 loadRealtimeDefaultsButton.addEventListener("click", loadRealtimeDefaults);
 
@@ -913,3 +1162,4 @@ loadRequestResponseDefaults();
 loadRealtimeDefaults();
 loadValidationDefaults();
 loadSerializationDefaults();
+loadEnvironmentDefaults();

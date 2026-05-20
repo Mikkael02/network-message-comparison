@@ -161,3 +161,15 @@ class SerializationExperimentConfig(BaseModel):
         if len(set(value)) != len(value):
             raise ValueError("operations must not contain duplicates")
         return value
+
+class SavedExperimentRunMetadata(BaseModel):
+    run_id: str
+    experiment_name: str
+    saved_at: str
+    run_label: str | None = None
+    file_path: str
+
+
+class SavedExperimentRunsResponse(BaseModel):
+    total_count: int
+    runs: list[SavedExperimentRunMetadata]

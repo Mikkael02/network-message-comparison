@@ -10,10 +10,11 @@ from app.overhead.models import (
     SequenceTransmissionAnalysisResult,
     AggregatedTransmissionUnit,
     AggregationMode,
+    EffectiveTransmissionSettings,
 )
 from app.overhead.presets import (
-    DEFAULT_LAYER_PRESETS,
     DEFAULT_PROTOCOL_PRESETS,
+    TRANSMISSION_PROFILE_PRESETS,
 )
 
 
@@ -35,48 +36,127 @@ def estimate_serialized_payload_size(input_data: TransmissionAnalysisInput) -> i
     )
 
 
-def resolve_application_protocol_overhead(input_data: TransmissionAnalysisInput) -> int:
-    if input_data.application_header_overhead_bytes is not None:
-        return input_data.application_header_overhead_bytes
-
-    return DEFAULT_PROTOCOL_PRESETS[
-        input_data.application_protocol
-    ].default_header_overhead_bytes
-
-
-def _resolve_application_protocol_overhead_for_sequence(
-    input_data: SequencePatternInput,
+def _resolve_application_protocol_overhead(
+    application_protocol,
+    manual_override,
 ) -> int:
-    if input_data.application_header_overhead_bytes is not None:
-        return input_data.application_header_overhead_bytes
+    if manual_override is not None:
+        return manual_override
 
     return DEFAULT_PROTOCOL_PRESETS[
-        input_data.application_protocol
+        application_protocol
     ].default_header_overhead_bytes
+
+
+def resolve_application_protocol_overhead(input_data: TransmissionAnalysisInput) -> int:
+    return _resolve_application_protocol_overhead(
+        input_data.application_protocol,
+        input_data.application_header_overhead_bytes,
+    )
+
+
+def _resolve_effective_settings(
+    transmission_profile,
+    mtu_bytes,
+    ethernet_header_size_bytes,
+    ethernet_trailer_size_bytes,
+    ethernet_min_payload_bytes,
+    ipv4_header_size_bytes,
+    tcp_header_size_bytes,
+    application_protocol,
+    application_header_overhead_bytes,
+) -> EffectiveTransmissionSettings:
+    profile = TRANSMISSION_PROFILE_PRESETS[transmission_profile]
+
+    return EffectiveTransmissionSettings(
+        transmission_profile=transmission_profile,
+        mtu_bytes=mtu_bytes if mtu_bytes is not None else profile.mtu_bytes,
+        ethernet_header_size_bytes=(
+            ethernet_header_size_bytes
+            if ethernet_header_size_bytes is not None
+            else profile.ethernet_header_size_bytes
+        ),
+        ethernet_trailer_size_bytes=(
+            ethernet_trailer_size_bytes
+            if ethernet_trailer_size_bytes is not None
+            else profile.ethernet_trailer_size_bytes
+        ),
+        ethernet_min_payload_bytes=(
+            ethernet_min_payload_bytes
+            if ethernet_min_payload_bytes is not None
+            else profile.ethernet_min_payload_bytes
+        ),
+        ipv4_header_size_bytes=(
+            ipv4_header_size_bytes
+            if ipv4_header_size_bytes is not None
+            else profile.ipv4_header_size_bytes
+        ),
+        tcp_header_size_bytes=(
+            tcp_header_size_bytes
+            if tcp_header_size_bytes is not None
+            else profile.tcp_header_size_bytes
+        ),
+        application_header_overhead_bytes=_resolve_application_protocol_overhead(
+            application_protocol,
+            application_header_overhead_bytes,
+        ),
+    )
+
+
+def _resolve_effective_settings_for_single(
+    input_data: TransmissionAnalysisInput,
+) -> EffectiveTransmissionSettings:
+    return _resolve_effective_settings(
+        transmission_profile=input_data.transmission_profile,
+        mtu_bytes=input_data.mtu_bytes,
+        ethernet_header_size_bytes=input_data.ethernet_header_size_bytes,
+        ethernet_trailer_size_bytes=input_data.ethernet_trailer_size_bytes,
+        ethernet_min_payload_bytes=input_data.ethernet_min_payload_bytes,
+        ipv4_header_size_bytes=input_data.ipv4_header_size_bytes,
+        tcp_header_size_bytes=input_data.tcp_header_size_bytes,
+        application_protocol=input_data.application_protocol,
+        application_header_overhead_bytes=input_data.application_header_overhead_bytes,
+    )
+
+
+def _resolve_effective_settings_for_sequence(
+    input_data: SequencePatternInput,
+) -> EffectiveTransmissionSettings:
+    return _resolve_effective_settings(
+        transmission_profile=input_data.transmission_profile,
+        mtu_bytes=input_data.mtu_bytes,
+        ethernet_header_size_bytes=input_data.ethernet_header_size_bytes,
+        ethernet_trailer_size_bytes=input_data.ethernet_trailer_size_bytes,
+        ethernet_min_payload_bytes=input_data.ethernet_min_payload_bytes,
+        ipv4_header_size_bytes=input_data.ipv4_header_size_bytes,
+        tcp_header_size_bytes=input_data.tcp_header_size_bytes,
+        application_protocol=input_data.application_protocol,
+        application_header_overhead_bytes=input_data.application_header_overhead_bytes,
+    )
 
 
 def _calculate_transport_metrics(
     payload_size_bytes: int,
     serialized_payload_size_bytes: int,
-    application_protocol_overhead_bytes: int,
-    mtu_bytes: int,
     message_frequency_hz: float,
+    effective_settings: EffectiveTransmissionSettings,
 ):
-    transport_overhead_bytes = DEFAULT_LAYER_PRESETS["tcp"].header_size_bytes
-    network_overhead_bytes = DEFAULT_LAYER_PRESETS["ipv4"].header_size_bytes
-    link_header_bytes = DEFAULT_LAYER_PRESETS["ethernet"].header_size_bytes
-    link_trailer_bytes = DEFAULT_LAYER_PRESETS["ethernet"].trailer_size_bytes
-    ethernet_min_payload_bytes = DEFAULT_LAYER_PRESETS["ethernet"].minimum_payload_bytes
+    transport_overhead_bytes = effective_settings.tcp_header_size_bytes
+    network_overhead_bytes = effective_settings.ipv4_header_size_bytes
+    link_header_bytes = effective_settings.ethernet_header_size_bytes
+    link_trailer_bytes = effective_settings.ethernet_trailer_size_bytes
+    ethernet_min_payload_bytes = effective_settings.ethernet_min_payload_bytes
+    application_protocol_overhead_bytes = effective_settings.application_header_overhead_bytes
 
     transport_payload_bytes = (
         serialized_payload_size_bytes + application_protocol_overhead_bytes
     )
 
     max_transport_payload_per_segment = (
-        mtu_bytes - transport_overhead_bytes - network_overhead_bytes
+        effective_settings.mtu_bytes - transport_overhead_bytes - network_overhead_bytes
     )
     if max_transport_payload_per_segment <= 0:
-        raise ValueError("MTU is too small for IPv4 + TCP headers")
+        raise ValueError("MTU is too small for configured IPv4 + TCP headers")
 
     segment_count = math.ceil(
         transport_payload_bytes / max_transport_payload_per_segment
@@ -116,6 +196,7 @@ def _calculate_transport_metrics(
         "transport_overhead_bytes": transport_overhead_bytes,
         "network_overhead_bytes": network_overhead_bytes,
         "link_overhead_bytes": link_header_bytes + link_trailer_bytes,
+        "application_protocol_overhead_bytes": application_protocol_overhead_bytes,
         "segment_count": segment_count,
         "frame_count": segment_count,
         "bytes_per_frame": bytes_per_frame,
@@ -132,20 +213,47 @@ def _calculate_transport_metrics(
     }
 
 
+def _build_settings_notes(effective_settings: EffectiveTransmissionSettings, input_data) -> list[str]:
+    notes = [
+        f"Transmission profile: {effective_settings.transmission_profile.value}",
+        f"Application protocol: {input_data.application_protocol.value}",
+        f"Payload encoding: {input_data.payload_encoding.value}",
+        "Calculation assumes Ethernet II + IPv4 + TCP baseline model with effective overrides.",
+    ]
+
+    override_fields = [
+        "mtu_bytes",
+        "application_header_overhead_bytes",
+        "ethernet_header_size_bytes",
+        "ethernet_trailer_size_bytes",
+        "ethernet_min_payload_bytes",
+        "ipv4_header_size_bytes",
+        "tcp_header_size_bytes",
+    ]
+
+    used_overrides = [
+        field_name for field_name in override_fields if getattr(input_data, field_name, None) is not None
+    ]
+
+    if used_overrides:
+        notes.append(
+            "Manual overrides applied: " + ", ".join(used_overrides) + "."
+        )
+
+    return notes
+
+
 def calculate_single_message_overhead(
     input_data: TransmissionAnalysisInput,
 ) -> TransmissionAnalysisResult:
+    effective_settings = _resolve_effective_settings_for_single(input_data)
     serialized_payload_size_bytes = estimate_serialized_payload_size(input_data)
-    application_protocol_overhead_bytes = resolve_application_protocol_overhead(
-        input_data
-    )
 
     metrics = _calculate_transport_metrics(
         payload_size_bytes=input_data.payload_size_bytes,
         serialized_payload_size_bytes=serialized_payload_size_bytes,
-        application_protocol_overhead_bytes=application_protocol_overhead_bytes,
-        mtu_bytes=input_data.mtu_bytes,
         message_frequency_hz=input_data.message_frequency_hz,
+        effective_settings=effective_settings,
     )
 
     total_sequence_payload_bytes = input_data.payload_size_bytes * input_data.message_count
@@ -153,20 +261,17 @@ def calculate_single_message_overhead(
         metrics["total_transmitted_bytes"] * input_data.message_count
     )
 
-    notes = [
-        f"Application protocol: {input_data.application_protocol.value}",
-        f"Payload encoding: {input_data.payload_encoding.value}",
-        "Calculation assumes Ethernet II + IPv4 + TCP baseline model.",
-    ]
+    notes = _build_settings_notes(effective_settings, input_data)
 
     if metrics["segment_count"] > 1:
-        notes.append("Payload exceeds single TCP segment for the configured MTU.")
+        notes.append("Payload exceeds single TCP segment for the effective MTU.")
 
     if metrics["unused_payload_space_bytes"] > 0:
         notes.append("Ethernet minimum payload size caused additional unused space.")
 
     return TransmissionAnalysisResult(
         input_summary=input_data,
+        effective_settings=effective_settings,
         serialized_payload_size_bytes=serialized_payload_size_bytes,
         total_sequence_payload_bytes=total_sequence_payload_bytes,
         total_sequence_transmitted_bytes=total_sequence_transmitted_bytes,
@@ -174,14 +279,14 @@ def calculate_single_message_overhead(
         layer_breakdown=LayerOverheadBreakdown(
             payload_size_bytes=input_data.payload_size_bytes,
             serialized_payload_size_bytes=serialized_payload_size_bytes,
-            application_protocol_overhead_bytes=application_protocol_overhead_bytes,
+            application_protocol_overhead_bytes=metrics["application_protocol_overhead_bytes"],
             transport_overhead_bytes=metrics["transport_overhead_bytes"],
             network_overhead_bytes=metrics["network_overhead_bytes"],
             link_overhead_bytes=metrics["link_overhead_bytes"],
             total_transmitted_bytes=metrics["total_transmitted_bytes"],
         ),
         frame_analysis=FrameAnalysis(
-            mtu_bytes=input_data.mtu_bytes,
+            mtu_bytes=effective_settings.mtu_bytes,
             segment_count=metrics["segment_count"],
             frame_count=metrics["frame_count"],
             bytes_per_frame=metrics["bytes_per_frame"],
@@ -226,10 +331,15 @@ def _group_payloads_nagle_like(
     payload_sizes: list[int],
     serialized_sizes: list[int],
     batch_size: int,
-    application_protocol_overhead_bytes: int,
-    max_transport_payload_per_segment: int,
+    effective_settings: EffectiveTransmissionSettings,
 ) -> list[tuple[int, int, int]]:
     groups: list[tuple[int, int, int]] = []
+
+    max_transport_payload_per_segment = (
+        effective_settings.mtu_bytes
+        - effective_settings.tcp_header_size_bytes
+        - effective_settings.ipv4_header_size_bytes
+    )
 
     current_count = 0
     current_payload_sum = 0
@@ -238,7 +348,7 @@ def _group_payloads_nagle_like(
     for payload_size, serialized_size in zip(payload_sizes, serialized_sizes):
         candidate_serialized_sum = current_serialized_sum + serialized_size
         candidate_transport_payload = (
-            candidate_serialized_sum + application_protocol_overhead_bytes
+            candidate_serialized_sum + effective_settings.application_header_overhead_bytes
         )
 
         should_flush = False
@@ -280,6 +390,8 @@ def _group_payloads_nagle_like(
 def calculate_sequence_overhead(
     input_data: SequencePatternInput,
 ) -> SequenceTransmissionAnalysisResult:
+    effective_settings = _resolve_effective_settings_for_sequence(input_data)
+
     payload_sizes = input_data.payload_sizes_bytes
     serialized_sizes = [
         _estimate_serialized_size_for_encoding(
@@ -288,18 +400,6 @@ def calculate_sequence_overhead(
         )
         for payload_size in payload_sizes
     ]
-
-    application_protocol_overhead_bytes = _resolve_application_protocol_overhead_for_sequence(
-        input_data
-    )
-
-    transport_overhead_bytes = DEFAULT_LAYER_PRESETS["tcp"].header_size_bytes
-    network_overhead_bytes = DEFAULT_LAYER_PRESETS["ipv4"].header_size_bytes
-    max_transport_payload_per_segment = (
-        input_data.mtu_bytes - transport_overhead_bytes - network_overhead_bytes
-    )
-    if max_transport_payload_per_segment <= 0:
-        raise ValueError("MTU is too small for IPv4 + TCP headers")
 
     if input_data.aggregation_mode == AggregationMode.PER_MESSAGE:
         grouped = list(
@@ -322,8 +422,7 @@ def calculate_sequence_overhead(
             payload_sizes,
             serialized_sizes,
             input_data.batch_size,
-            application_protocol_overhead_bytes,
-            max_transport_payload_per_segment,
+            effective_settings,
         )
 
     aggregated_units: list[AggregatedTransmissionUnit] = []
@@ -336,9 +435,8 @@ def calculate_sequence_overhead(
         metrics = _calculate_transport_metrics(
             payload_size_bytes=payload_sum,
             serialized_payload_size_bytes=serialized_sum,
-            application_protocol_overhead_bytes=application_protocol_overhead_bytes,
-            mtu_bytes=input_data.mtu_bytes,
             message_frequency_hz=input_data.message_frequency_hz,
+            effective_settings=effective_settings,
         )
 
         aggregated_units.append(
@@ -347,7 +445,7 @@ def calculate_sequence_overhead(
                 original_message_count=message_count,
                 original_payload_bytes_sum=payload_sum,
                 aggregated_serialized_payload_size_bytes=serialized_sum,
-                application_protocol_overhead_bytes=application_protocol_overhead_bytes,
+                application_protocol_overhead_bytes=metrics["application_protocol_overhead_bytes"],
                 total_transmitted_bytes=metrics["total_transmitted_bytes"],
                 frame_count=metrics["frame_count"],
             )
@@ -360,30 +458,23 @@ def calculate_sequence_overhead(
     overhead_ratio = overhead_bytes / total_transmitted_bytes
     payload_efficiency_ratio = total_original_payload_bytes / total_transmitted_bytes
 
-    sequence_duration_seconds = (
-        len(payload_sizes) / input_data.message_frequency_hz
-    )
+    sequence_duration_seconds = len(payload_sizes) / input_data.message_frequency_hz
     required_bitrate_bps = (total_transmitted_bytes * 8) / sequence_duration_seconds
     required_bitrate_kbps = required_bitrate_bps / 1000
     required_bitrate_mbps = required_bitrate_bps / 1_000_000
 
-    notes = [
-        f"Aggregation mode: {input_data.aggregation_mode.value}",
-        "Sequence calculation assumes Ethernet II + IPv4 + TCP baseline model.",
-    ]
+    notes = _build_settings_notes(effective_settings, input_data)
+    notes[1] = f"Aggregation mode: {input_data.aggregation_mode.value}"
 
     if input_data.aggregation_mode == AggregationMode.BATCHED:
-        notes.append(
-            "Messages are grouped into fixed-size batches before transmission."
-        )
+        notes.append("Messages are grouped into fixed-size batches before transmission.")
 
     if input_data.aggregation_mode == AggregationMode.NAGLE_LIKE:
-        notes.append(
-            "Messages are greedily aggregated until the payload nears single-segment capacity."
-        )
+        notes.append("Messages are greedily aggregated until the payload nears single-segment capacity.")
 
     return SequenceTransmissionAnalysisResult(
         input_summary=input_data,
+        effective_settings=effective_settings,
         original_message_count=len(payload_sizes),
         aggregated_message_count=len(grouped),
         total_original_payload_bytes=total_original_payload_bytes,

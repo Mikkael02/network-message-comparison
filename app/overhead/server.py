@@ -1,5 +1,6 @@
 from pathlib import Path
 import json
+from fastapi import Query
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
@@ -19,6 +20,7 @@ from app.overhead.models import (
 from app.overhead.presets import (
     DEFAULT_LAYER_PRESETS,
     DEFAULT_PROTOCOL_PRESETS,
+    TRANSMISSION_PROFILE_PRESETS,
 )
 
 from app.experiments.models import (
@@ -26,15 +28,28 @@ from app.experiments.models import (
     RealtimeFetchExperimentConfig,
     ValidationExperimentConfig,
     SerializationExperimentConfig,
+    SavedExperimentRunsResponse,
 )
+from app.experiments.storage import (
+    list_saved_runs,
+    save_experiment_run,
+)
+
 from app.experiments.request_response import run_request_response_experiment
 from app.experiments.realtime import run_realtime_fetch_experiment
 from app.experiments.validation import run_validation_experiment
 from app.experiments.serialization import run_serialization_experiment
 
+from app.orchestration.models import (
+    EnvironmentServiceStatusResponse,
+    ServiceStatusCheckConfig,
+)
+from app.orchestration.service_status import check_environment_services
+
 class PresetsResponse(BaseModel):
     layer_presets: dict
     protocol_presets: dict
+    transmission_profiles: dict
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -81,6 +96,10 @@ def get_presets() -> PresetsResponse:
         protocol_presets={
             key.value: preset.model_dump(mode="json")
             for key, preset in DEFAULT_PROTOCOL_PRESETS.items()
+        },
+        transmission_profiles={
+            key.value: preset.model_dump(mode="json")
+            for key, preset in TRANSMISSION_PROFILE_PRESETS.items()
         },
     )
 
@@ -143,8 +162,22 @@ def get_request_response_default_config() -> RequestResponseExperimentConfig:
 @app.post("/experiments/request-response/run")
 def run_request_response_endpoint(
     config: RequestResponseExperimentConfig,
+    save_result: bool = Query(default=False),
+    run_label: str | None = Query(default=None),
 ) -> dict:
-    return run_request_response_experiment(config)
+    results = run_request_response_experiment(config)
+
+    if save_result:
+        metadata = save_experiment_run(
+            experiment_name="request_response",
+            results=results,
+            run_label=run_label,
+        )
+        results["saved_result"] = metadata.model_dump(mode="json")
+    else:
+        results["saved_result"] = None
+
+    return results
 
 @app.get("/experiments/realtime/default-config")
 def get_realtime_default_config() -> RealtimeFetchExperimentConfig:
@@ -154,8 +187,22 @@ def get_realtime_default_config() -> RealtimeFetchExperimentConfig:
 @app.post("/experiments/realtime/run")
 def run_realtime_endpoint(
     config: RealtimeFetchExperimentConfig,
+    save_result: bool = Query(default=False),
+    run_label: str | None = Query(default=None),
 ) -> dict:
-    return run_realtime_fetch_experiment(config)
+    results = run_realtime_fetch_experiment(config)
+
+    if save_result:
+        metadata = save_experiment_run(
+            experiment_name="realtime",
+            results=results,
+            run_label=run_label,
+        )
+        results["saved_result"] = metadata.model_dump(mode="json")
+    else:
+        results["saved_result"] = None
+
+    return results
 
 @app.get("/experiments/validation/default-config")
 def get_validation_default_config() -> ValidationExperimentConfig:
@@ -165,8 +212,22 @@ def get_validation_default_config() -> ValidationExperimentConfig:
 @app.post("/experiments/validation/run")
 def run_validation_endpoint(
     config: ValidationExperimentConfig,
+    save_result: bool = Query(default=False),
+    run_label: str | None = Query(default=None),
 ) -> dict:
-    return run_validation_experiment(config)
+    results = run_validation_experiment(config)
+
+    if save_result:
+        metadata = save_experiment_run(
+            experiment_name="validation",
+            results=results,
+            run_label=run_label,
+        )
+        results["saved_result"] = metadata.model_dump(mode="json")
+    else:
+        results["saved_result"] = None
+
+    return results
 
 @app.get("/experiments/serialization/default-config")
 def get_serialization_default_config() -> SerializationExperimentConfig:
@@ -176,5 +237,54 @@ def get_serialization_default_config() -> SerializationExperimentConfig:
 @app.post("/experiments/serialization/run")
 def run_serialization_endpoint(
     config: SerializationExperimentConfig,
+    save_result: bool = Query(default=False),
+    run_label: str | None = Query(default=None),
 ) -> dict:
-    return run_serialization_experiment(config)
+    results = run_serialization_experiment(config)
+
+    if save_result:
+        metadata = save_experiment_run(
+            experiment_name="serialization",
+            results=results,
+            run_label=run_label,
+        )
+        results["saved_result"] = metadata.model_dump(mode="json")
+    else:
+        results["saved_result"] = None
+
+    return results
+
+@app.get(
+    "/environment/services/default-config",
+    response_model=ServiceStatusCheckConfig,
+)
+def get_environment_services_default_config() -> ServiceStatusCheckConfig:
+    return ServiceStatusCheckConfig()
+
+
+@app.get(
+    "/environment/services/status",
+    response_model=EnvironmentServiceStatusResponse,
+)
+def get_environment_services_status() -> EnvironmentServiceStatusResponse:
+    return check_environment_services(ServiceStatusCheckConfig())
+
+
+@app.post(
+    "/environment/services/status",
+    response_model=EnvironmentServiceStatusResponse,
+)
+def check_environment_services_endpoint(
+    config: ServiceStatusCheckConfig,
+) -> EnvironmentServiceStatusResponse:
+    return check_environment_services(config)
+
+@app.get(
+    "/experiment-runs/recent",
+    response_model=SavedExperimentRunsResponse,
+)
+def get_recent_experiment_runs(
+    limit: int = Query(default=20, ge=1, le=200),
+    experiment_name: str | None = Query(default=None),
+) -> SavedExperimentRunsResponse:
+    return list_saved_runs(limit=limit, experiment_name=experiment_name)
