@@ -1,0 +1,25 @@
+{
+  "http_transport": {
+    "pid": 8948,
+    "started_at": "2026-05-21T13:42:15.586347+00:00",
+    "script_path": "scripts/run_http.py",
+    "stdout_log_path": "results/orchestration/logs/http_transport.stdout.log",
+    "stderr_log_path": "results/orchestration/logs/http_transport.stderr.log",
+    "last_readiness_status": "not_ready",
+    "last_readiness_detail": "Service did not become ready within 8.0s. Last readiness check: ConnectTimeout: timed out"
+  },
+  "ws_transport": {
+    "pid": 6836,
+    "started_at": "2026-05-21T13:42:43.016576+00:00",
+    "script_path": "scripts/run_ws.py",
+    "stdout_log_path": "results/orchestration/logs/ws_transport.stdout.log",
+    "stderr_log_path": "results/orchestration/logs/ws_transport.stderr.log",
+    "last_readiness_status": "not_ready",
+    "last_readiness_detail": "Service did not become ready within 8.0s. Last readiness check: ConnectTimeout: timed out"
+  },
+  "grpc_transport": {
+    "pid": 16064,
+    "started_at": "2026-05-21T13:13:25.877644+00:00",
+    "script_path": "scripts/run_grpc.py"
+  }
+}

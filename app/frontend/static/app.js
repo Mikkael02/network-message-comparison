@@ -10,9 +10,14 @@ const summaryCards = document.getElementById("summary-cards");
 const resultJson = document.getElementById("result-json");
 
 const navOverhead = document.getElementById("nav-overhead");
-const navTransport = document.getElementById("nav-transport");
+const navExperiments = document.getElementById("nav-experiments");
+const navEnvironment = document.getElementById("nav-environment");
+const navHistory = document.getElementById("nav-history");
+
 const viewOverhead = document.getElementById("view-overhead");
-const viewTransport = document.getElementById("view-transport");
+const viewExperiments = document.getElementById("view-experiments");
+const viewEnvironment = document.getElementById("view-environment");
+const viewHistory = document.getElementById("view-history");
 const pageTitle = document.getElementById("page-title");
 const pageDescription = document.getElementById("page-description");
 
@@ -73,20 +78,36 @@ function setMode(mode) {
 
 function setMainView(view) {
   const overheadActive = view === "overhead";
+  const experimentsActive = view === "experiments";
+  const environmentActive = view === "environment";
+  const historyActive = view === "history";
+
   navOverhead.classList.toggle("active", overheadActive);
-  navTransport.classList.toggle("active", !overheadActive);
+  navExperiments.classList.toggle("active", experimentsActive);
+  navEnvironment.classList.toggle("active", environmentActive);
+  navHistory.classList.toggle("active", historyActive);
+
   viewOverhead.classList.toggle("hidden", !overheadActive);
-  viewTransport.classList.toggle("hidden", overheadActive);
+  viewExperiments.classList.toggle("hidden", !experimentsActive);
+  viewEnvironment.classList.toggle("hidden", !environmentActive);
+  viewHistory.classList.toggle("hidden", !historyActive);
 
   if (overheadActive) {
-    pageTitle.textContent = "Transmission Overhead Calculator";
+    pageTitle.textContent = "Model transmisji i narzutu";
     pageDescription.textContent =
       "Analiza narzutu transmisji dla pojedynczej wiadomości i sekwencji wiadomości w modelu Ethernet II + IPv4 + TCP.";
-  } else {
-    pageTitle.textContent = "Transport Comparison Dashboard";
+  } else if (experimentsActive) {
+    pageTitle.textContent = "Eksperymenty";
     pageDescription.textContent =
-      "Przegląd wcześniej wygenerowanych wyników dla request-response, realtime, walidacji i raportów zbiorczych oraz uruchamianie eksperymentów request-response, realtime, validation i serialization.";
-    loadReportsDashboard();
+      "Uruchamianie eksperymentów request-response, realtime, walidacji i serializacji.";
+  } else if (environmentActive) {
+    pageTitle.textContent = "Środowisko badawcze";
+    pageDescription.textContent =
+      "Sprawdzanie dostępności usług HTTP, WebSocket i gRPC oraz przygotowanie środowiska do badań.";
+  } else {
+    pageTitle.textContent = "Historia uruchomień";
+    pageDescription.textContent =
+      "Przegląd zapisanych uruchomień eksperymentów i podgląd szczegółów wybranego runu.";
   }
 }
 
@@ -214,14 +235,14 @@ async function checkHealth() {
     const data = await response.json();
 
     if (data.status === "ok") {
-      apiStatus.textContent = "API ready";
+      apiStatus.textContent = "API gotowe";
       apiStatus.classList.add("ok");
       apiStatus.classList.remove("error");
     } else {
       throw new Error("Unexpected health response");
     }
   } catch (error) {
-    apiStatus.textContent = "API unavailable";
+    apiStatus.textContent = "API niedostępne";
     apiStatus.classList.add("error");
     apiStatus.classList.remove("ok");
   }
@@ -235,30 +256,30 @@ async function loadPresets() {
     const profileItems = Object.entries(data.transmission_profiles)
       .map(
         ([key, value]) =>
-          `<li>${key}: MTU ${value.mtu_bytes}, IPv4 ${value.ipv4_header_size_bytes}B, TCP ${value.tcp_header_size_bytes}B</li>`
+          `<li>${key}: MTU ${value.mtu_bytes}B, IPv4 ${value.ipv4_header_size_bytes}B, TCP ${value.tcp_header_size_bytes}B</li>`
       )
       .join("");
 
     presetsContent.innerHTML = `
-      <strong>Layers</strong>
+      <strong>Warstwy</strong>
       <ul class="preset-list">
         <li>Ethernet: ${data.layer_presets.ethernet.header_size_bytes}B header + ${data.layer_presets.ethernet.trailer_size_bytes}B trailer</li>
         <li>IPv4: ${data.layer_presets.ipv4.header_size_bytes}B header</li>
         <li>TCP: ${data.layer_presets.tcp.header_size_bytes}B header</li>
       </ul>
-      <strong>Protocols</strong>
+      <strong>Protokoły</strong>
       <ul class="preset-list">
         <li>HTTP: ${data.protocol_presets.http.default_header_overhead_bytes}B</li>
         <li>WebSocket: ${data.protocol_presets.websocket.default_header_overhead_bytes}B</li>
         <li>gRPC: ${data.protocol_presets.grpc.default_header_overhead_bytes}B</li>
       </ul>
-      <strong>Transmission profiles</strong>
+      <strong>Profile transmisji</strong>
       <ul class="preset-list">
         ${profileItems}
       </ul>
     `;
   } catch (error) {
-    presetsContent.textContent = "Could not load presets.";
+    presetsContent.textContent = "Nie udało się załadować presetów.";
   }
 }
 
@@ -383,21 +404,21 @@ function appendOptionalNumber(target, key, value) {
 function renderEffectiveSettings(data) {
   if (!data.effective_settings) {
     effectiveSettingsBox.innerHTML =
-      `<div class="summary-card muted">No effective settings available.</div>`;
+      `<div class="summary-card muted">Brak efektywnych ustawień.</div>`;
     return;
   }
 
   const settings = data.effective_settings;
 
   renderCardGroup(effectiveSettingsBox, [
-    { label: "Profile", value: settings.transmission_profile },
+    { label: "Profil", value: settings.transmission_profile },
     { label: "MTU [B]", value: String(settings.mtu_bytes) },
-    { label: "Ethernet header [B]", value: String(settings.ethernet_header_size_bytes) },
-    { label: "Ethernet trailer [B]", value: String(settings.ethernet_trailer_size_bytes) },
-    { label: "Ethernet minimum payload [B]", value: String(settings.ethernet_min_payload_bytes) },
-    { label: "IPv4 header [B]", value: String(settings.ipv4_header_size_bytes) },
-    { label: "TCP header [B]", value: String(settings.tcp_header_size_bytes) },
-    { label: "App header overhead [B]", value: String(settings.application_header_overhead_bytes) },
+    { label: "Nagłówek Ethernet [B]", value: String(settings.ethernet_header_size_bytes) },
+    { label: "Trailer Ethernet [B]", value: String(settings.ethernet_trailer_size_bytes) },
+    { label: "Minimalny payload Ethernet [B]", value: String(settings.ethernet_min_payload_bytes) },
+    { label: "Nagłówek IPv4 [B]", value: String(settings.ipv4_header_size_bytes) },
+    { label: "Nagłówek TCP [B]", value: String(settings.tcp_header_size_bytes) },
+    { label: "Narzut nagłówka aplikacyjnego [B]", value: String(settings.application_header_overhead_bytes) },
   ]);
 }
 
@@ -512,18 +533,18 @@ async function analyzeSingle(event) {
   const data = await response.json();
 
   if (!response.ok) {
-    renderSummary([{ label: "Error", value: "Request failed" }]);
+    renderSummary([{ label: "Błąd", value: "Żądanie nie powiodło się" }]);
     effectiveSettingsBox.innerHTML =
-      `<div class="summary-card muted">Could not resolve effective settings.</div>`;
+      `<div class="summary-card muted">Nie udało się wyznaczyć efektywnych ustawień.</div>`;
     renderResult(data);
     return;
   }
 
   renderSummary([
-    { label: "Total transmitted bytes", value: String(data.layer_breakdown.total_transmitted_bytes) },
-    { label: "Frame count", value: String(data.frame_analysis.frame_count) },
-    { label: "Payload efficiency", value: data.efficiency.payload_efficiency_ratio.toFixed(4) },
-    { label: "Required bitrate [kbps]", value: data.efficiency.required_bitrate_kbps.toFixed(4) },
+    { label: "Łączna liczba przesłanych bajtów", value: String(data.layer_breakdown.total_transmitted_bytes) },
+    { label: "Liczba ramek", value: String(data.frame_analysis.frame_count) },
+    { label: "Efektywność payloadu", value: data.efficiency.payload_efficiency_ratio.toFixed(4) },
+    { label: "Wymagany bitrate [kb/s]", value: data.efficiency.required_bitrate_kbps.toFixed(4) },
   ]);
 
   renderEffectiveSettings(data);
@@ -543,18 +564,18 @@ async function analyzeSequence(event) {
   const data = await response.json();
 
   if (!response.ok) {
-    renderSummary([{ label: "Error", value: "Request failed" }]);
+    renderSummary([{ label: "Błąd", value: "Żądanie nie powiodło się" }]);
     effectiveSettingsBox.innerHTML =
-      `<div class="summary-card muted">Could not resolve effective settings.</div>`;
+      `<div class="summary-card muted">Nie udało się wyznaczyć efektywnych ustawień.</div>`;
     renderResult(data);
     return;
   }
 
   renderSummary([
-    { label: "Aggregated message count", value: String(data.aggregated_message_count) },
-    { label: "Total transmitted bytes", value: String(data.total_transmitted_bytes) },
-    { label: "Total frame count", value: String(data.total_frame_count) },
-    { label: "Payload efficiency", value: data.payload_efficiency_ratio.toFixed(4) },
+    { label: "Liczba zagregowanych wiadomości", value: String(data.aggregated_message_count) },
+    { label: "Łączna liczba przesłanych bajtów", value: String(data.total_transmitted_bytes) },
+    { label: "Łączna liczba ramek", value: String(data.total_frame_count) },
+    { label: "Efektywność payloadu", value: data.payload_efficiency_ratio.toFixed(4) },
   ]);
 
   renderEffectiveSettings(data);
@@ -677,7 +698,7 @@ async function loadEnvironmentDefaults() {
     fillEnvironmentStatusForm(config);
   } catch (error) {
     environmentStatusSummary.innerHTML =
-      `<div class="summary-card muted">Could not load environment defaults.</div>`;
+      `<div class="summary-card muted">Nie udało się wczytać domyślnej konfiguracji środowiska.</div>`;
   }
 }
 
@@ -687,7 +708,7 @@ async function loadRecentRuns(event = null) {
   }
 
   recentRunsSummary.innerHTML =
-    `<div class="summary-card muted">Loading recent runs...</div>`;
+    `<div class="summary-card muted">Ładowanie ostatnich uruchomień...</div>`;
   recentRunsTable.innerHTML = "";
 
   try {
@@ -700,7 +721,7 @@ async function loadRecentRuns(event = null) {
 
     if (!response.ok) {
       recentRunsSummary.innerHTML =
-        `<div class="summary-card muted">Could not load recent runs.</div>`;
+        `<div class="summary-card muted">Nie udało się załadować ostatnich uruchomień.</div>`;
       recentRunsTable.innerHTML =
         `<div class="summary-card muted">${JSON.stringify(data)}</div>`;
       return;
@@ -708,16 +729,16 @@ async function loadRecentRuns(event = null) {
 
     renderCardGroup(recentRunsSummary, [
       {
-        label: "Total matching runs",
+        label: "Łącznie pasujących uruchomień",
         value: String(data.total_count),
       },
       {
-        label: "Displayed runs",
+        label: "Wyświetlone uruchomienia",
         value: String(data.runs.length),
       },
       {
-        label: "Filter",
-        value: experimentName || "all",
+        label: "Filtr",
+        value: experimentName || "wszystkie",
       },
       {
         label: "Limit",
@@ -728,20 +749,20 @@ async function loadRecentRuns(event = null) {
     renderTable(
       recentRunsTable,
       [
-        { key: "experiment_name", label: "Experiment" },
-        { key: "run_id", label: "Run ID" },
+        { key: "experiment_name", label: "Eksperyment" },
+        { key: "run_id", label: "ID uruchomienia" },
         {
           key: "run_label",
-          label: "Run label",
+          label: "Etykieta uruchomienia",
           render: (row) => row.run_label || "-",
         },
-        { key: "saved_at", label: "Saved at" },
-        { key: "file_path", label: "File path" },
+        { key: "saved_at", label: "Zapisano o" },
+        { key: "file_path", label: "Ścieżka pliku" },
         {
           key: "actions",
-          label: "Action",
+          label: "Akcja",
           render: (row) =>
-            `<button class="primary-button secondary-button load-run-detail-button" data-run-id="${row.run_id}">Load</button>`,
+            `<button class="primary-button secondary-button load-run-detail-button" data-run-id="${row.run_id}">Wczytaj</button>`,
         },
       ],
       data.runs
@@ -756,7 +777,7 @@ async function loadRecentRuns(event = null) {
     });
   } catch (error) {
     recentRunsSummary.innerHTML =
-      `<div class="summary-card muted">Could not load recent runs.</div>`;
+      `<div class="summary-card muted">Nie udało się załadować ostatnich uruchomień.</div>`;
     recentRunsTable.innerHTML =
       `<div class="summary-card muted">${error}</div>`;
   }
@@ -765,14 +786,14 @@ async function loadRecentRuns(event = null) {
 async function loadSavedRunDetailById(runId) {
   if (!runId) {
     savedRunDetailSummary.innerHTML =
-      `<div class="summary-card muted">Provide a run ID first.</div>`;
-    savedRunDetailJson.textContent = "No saved run loaded.";
+      `<div class="summary-card muted">Najpierw podaj ID uruchomienia.</div>`;
+    savedRunDetailJson.textContent = "Nie wczytano zapisanego uruchomienia.";
     return;
   }
 
   savedRunDetailSummary.innerHTML =
-    `<div class="summary-card muted">Loading saved run...</div>`;
-  savedRunDetailJson.textContent = "Loading saved run...";
+    `<div class="summary-card muted">Ładowanie zapisanego uruchomienia...</div>`;
+  savedRunDetailJson.textContent = "Ładowanie zapisanego uruchomienia...";
 
   try {
     const response = await fetch(`/experiment-runs/${encodeURIComponent(runId)}`);
@@ -780,17 +801,17 @@ async function loadSavedRunDetailById(runId) {
 
     if (!response.ok) {
       savedRunDetailSummary.innerHTML =
-        `<div class="summary-card muted">Could not load saved run.</div>`;
+        `<div class="summary-card muted">Nie udało się wczytać zapisanego uruchomienia.</div>`;
       savedRunDetailJson.textContent = JSON.stringify(data, null, 2);
       return;
     }
 
     renderCardGroup(savedRunDetailSummary, [
-      { label: "Experiment", value: data.metadata.experiment_name },
-      { label: "Run ID", value: data.metadata.run_id },
-      { label: "Run label", value: data.metadata.run_label || "-" },
-      { label: "Saved at", value: data.metadata.saved_at },
-      { label: "File path", value: data.metadata.file_path },
+      { label: "Eksperyment", value: data.metadata.experiment_name },
+      { label: "ID uruchomienia", value: data.metadata.run_id },
+      { label: "Etykieta uruchomienia", value: data.metadata.run_label || "-" },
+      { label: "Zapisano o", value: data.metadata.saved_at },
+      { label: "Ścieżka pliku", value: data.metadata.file_path },
     ]);
 
     savedRunDetailJson.textContent = JSON.stringify(data, null, 2);
@@ -798,7 +819,7 @@ async function loadSavedRunDetailById(runId) {
       data.metadata.run_id;
   } catch (error) {
     savedRunDetailSummary.innerHTML =
-      `<div class="summary-card muted">Could not load saved run.</div>`;
+      `<div class="summary-card muted">Nie udało się wczytać zapisanego uruchomienia.</div>`;
     savedRunDetailJson.textContent = String(error);
   }
 }
@@ -819,7 +840,7 @@ async function refreshEnvironmentStatus(event = null) {
   }
 
   environmentStatusSummary.innerHTML =
-    `<div class="summary-card muted">Checking environment...</div>`;
+    `<div class="summary-card muted">Sprawdzanie środowiska...</div>`;
   environmentStatusTable.innerHTML = "";
 
   const payload = buildEnvironmentStatusPayload(
@@ -837,7 +858,7 @@ async function refreshEnvironmentStatus(event = null) {
 
     if (!response.ok) {
       environmentStatusSummary.innerHTML =
-        `<div class="summary-card muted">Environment status check failed.</div>`;
+        `<div class="summary-card muted">Sprawdzenie statusu środowiska nie powiodło się.</div>`;
       environmentStatusTable.innerHTML =
         `<div class="summary-card muted">${JSON.stringify(data)}</div>`;
       return;
@@ -847,11 +868,11 @@ async function refreshEnvironmentStatus(event = null) {
 
     renderCardGroup(environmentStatusSummary, [
       {
-        label: "Overall status",
-        value: data.all_available ? "all available" : "degraded",
+        label: "Stan ogólny",
+        value: data.all_available ? "wszystkie dostępne" : "częściowo niedostępne",
       },
       {
-        label: "Available services",
+        label: "Dostępne usługi",
         value: `${availableCount}/${data.services.length}`,
       },
       {
@@ -859,7 +880,7 @@ async function refreshEnvironmentStatus(event = null) {
         value: String(data.config.timeout_seconds),
       },
       {
-        label: "Checked at",
+        label: "Sprawdzono o",
         value: data.checked_at,
       },
     ]);
@@ -867,30 +888,30 @@ async function refreshEnvironmentStatus(event = null) {
     renderTable(
       environmentStatusTable,
       [
-        { key: "service_name", label: "Service" },
+        { key: "service_name", label: "Usługa" },
         {
           key: "available",
-          label: "Available",
+          label: "Dostępna",
           render: (row) =>
             row.available
-              ? `<span class="report-ok">yes</span>`
-              : `<span class="report-missing">no</span>`,
+              ? `<span class="report-ok">tak</span>`
+              : `<span class="report-missing">nie</span>`,
         },
         {
           key: "response_time_ms",
-          label: "Response time [ms]",
+          label: "Czas odpowiedzi [ms]",
           render: (row) =>
             row.response_time_ms === null
               ? "-"
               : Number(row.response_time_ms).toFixed(3),
         },
-        { key: "detail", label: "Detail" },
+        { key: "detail", label: "Szczegóły" },
       ],
       data.services
     );
   } catch (error) {
     environmentStatusSummary.innerHTML =
-      `<div class="summary-card muted">Could not refresh environment status.</div>`;
+      `<div class="summary-card muted">Nie udało się odświeżyć statusu środowiska.</div>`;
     environmentStatusTable.innerHTML =
       `<div class="summary-card muted">${error}</div>`;
   }
@@ -902,7 +923,7 @@ async function loadValidationDefaults() {
     const config = await response.json();
     fillValidationExperimentForm(config);
   } catch (error) {
-    validationRunJson.textContent = "Could not load default validation config.";
+    validationRunJson.textContent = "Nie udało się wczytać domyślnej konfiguracji walidacji.";
   }
 }
 
@@ -912,7 +933,7 @@ async function loadSerializationDefaults() {
     const config = await response.json();
     fillSerializationExperimentForm(config);
   } catch (error) {
-    serializationRunJson.textContent = "Could not load default serialization config.";
+    serializationRunJson.textContent = "Nie udało się wczytać domyślnej konfiguracji serializacji.";
   }
 }
 
@@ -929,11 +950,11 @@ async function runRequestResponseExperiment(event) {
 
   if (!payload.transports.length) {
     requestResponseRunSummary.innerHTML =
-      `<div class="summary-card muted">Select at least one transport.</div>`;
+      `<div class="summary-card muted">Wybierz co najmniej jeden transport.</div>`;
     return;
   }
 
-  requestResponseRunSummary.innerHTML = `<div class="summary-card muted">Running experiment...</div>`;
+  requestResponseRunSummary.innerHTML = `<div class="summary-card muted">Trwa uruchamianie eksperymentu...</div>`;
   requestResponseRunJson.textContent = "Running experiment...";
 
   const response = await fetch(
@@ -952,7 +973,7 @@ async function runRequestResponseExperiment(event) {
   const data = await response.json();
 
   if (!response.ok) {
-    requestResponseRunSummary.innerHTML = `<div class="summary-card muted">Experiment failed.</div>`;
+    requestResponseRunSummary.innerHTML = `<div class="summary-card muted">Uruchomienie eksperymentu nie powiodło się.</div>`;
     requestResponseRunJson.textContent = JSON.stringify(data, null, 2);
     requestResponseRunTable.innerHTML = "";
     return;
@@ -969,15 +990,15 @@ async function runRequestResponseExperiment(event) {
   );
 
   const requestResponseCards = [
-    { label: "Iterations", value: String(data.iterations) },
-    { label: "Transports run", value: String(data.transports.length) },
-    { label: "Best set_value", value: `${setBest.transport} (${setBest.avg_ms.toFixed(3)} ms)` },
-    { label: "Best get_value", value: `${getBest.transport} (${getBest.avg_ms.toFixed(3)} ms)` },
+    { label: "Iteracje", value: String(data.iterations) },
+    { label: "Uruchomione transporty", value: String(data.transports.length) },
+    { label: "Najlepszy set_value", value: `${setBest.transport} (${setBest.avg_ms.toFixed(3)} ms)` },
+    { label: "Najlepszy get_value", value: `${getBest.transport} (${getBest.avg_ms.toFixed(3)} ms)` },
   ];
 
   if (data.saved_result) {
     requestResponseCards.push({
-      label: "Saved run",
+      label: "Zapisany run",
       value: data.saved_result.run_id,
     });
   }
@@ -1037,11 +1058,11 @@ async function runRealtimeExperiment(event) {
 
   if (!payload.transports.length) {
     realtimeRunSummary.innerHTML =
-      `<div class="summary-card muted">Select at least one transport.</div>`;
+      `<div class="summary-card muted">Wybierz co najmniej jeden transport.</div>`;
     return;
   }
 
-  realtimeRunSummary.innerHTML = `<div class="summary-card muted">Running experiment...</div>`;
+  realtimeRunSummary.innerHTML = `<div class="summary-card muted">Trwa uruchamianie eksperymentu...</div>`;
   realtimeRunJson.textContent = "Running experiment...";
 
   const response = await fetch(
@@ -1060,7 +1081,7 @@ async function runRealtimeExperiment(event) {
   const data = await response.json();
 
   if (!response.ok) {
-    realtimeRunSummary.innerHTML = `<div class="summary-card muted">Experiment failed.</div>`;
+    realtimeRunSummary.innerHTML = `<div class="summary-card muted">Uruchomienie eksperymentu nie powiodło się.</div>`;
     realtimeRunJson.textContent = JSON.stringify(data, null, 2);
     realtimeRunTable.innerHTML = "";
     return;
@@ -1077,15 +1098,15 @@ async function runRealtimeExperiment(event) {
   );
 
   const realtimeCards = [
-    { label: "Iterations", value: String(data.iterations) },
-    { label: "Transports run", value: String(data.transports.length) },
+    { label: "Iteracje", value: String(data.iterations) },
+    { label: "Uruchomione transporty", value: String(data.transports.length) },
     { label: "Best non_empty_fetch", value: `${bestNonEmpty.transport} (${bestNonEmpty.summary.avg_ms.toFixed(3)} ms)` },
     { label: "Best empty_fetch", value: `${bestEmpty.transport} (${bestEmpty.summary.avg_ms.toFixed(3)} ms)` },
   ];
 
   if (data.saved_result) {
     realtimeCards.push({
-      label: "Saved run",
+      label: "Zapisany run",
       value: data.saved_result.run_id,
     });
   }
@@ -1127,11 +1148,11 @@ async function runValidationExperiment(event) {
 
   if (!payload.scenarios.length) {
     validationRunSummary.innerHTML =
-      `<div class="summary-card muted">Select at least one scenario.</div>`;
+      `<div class="summary-card muted">Wybierz co najmniej jeden scenariusz.</div>`;
     return;
   }
 
-  validationRunSummary.innerHTML = `<div class="summary-card muted">Running experiment...</div>`;
+  validationRunSummary.innerHTML = `<div class="summary-card muted">Trwa uruchamianie eksperymentu...</div>`;
   validationRunJson.textContent = "Running experiment...";
 
   const response = await fetch(
@@ -1150,7 +1171,7 @@ async function runValidationExperiment(event) {
   const data = await response.json();
 
   if (!response.ok) {
-    validationRunSummary.innerHTML = `<div class="summary-card muted">Experiment failed.</div>`;
+    validationRunSummary.innerHTML = `<div class="summary-card muted">Uruchomienie eksperymentu nie powiodło się.</div>`;
     validationRunJson.textContent = JSON.stringify(data, null, 2);
     validationRunTable.innerHTML = "";
     return;
@@ -1160,15 +1181,15 @@ async function runValidationExperiment(event) {
   const slowest = worstRowBy(data.measurements, "summary.avg_us");
 
   const validationCards = [
-    { label: "Iterations", value: String(data.iterations) },
-    { label: "Scenarios run", value: String(data.scenarios.length) },
-    { label: "Fastest scenario", value: `${fastest.scenario} (${fastest.summary.avg_us.toFixed(3)} us)` },
-    { label: "Slowest scenario", value: `${slowest.scenario} (${slowest.summary.avg_us.toFixed(3)} us)` },
+    { label: "Iteracje", value: String(data.iterations) },
+    { label: "Uruchomione scenariusze", value: String(data.scenarios.length) },
+    { label: "Najszybszy scenariusz", value: `${fastest.scenario} (${fastest.summary.avg_us.toFixed(3)} us)` },
+    { label: "Najwolniejszy scenariusz", value: `${slowest.scenario} (${slowest.summary.avg_us.toFixed(3)} us)` },
   ];
 
   if (data.saved_result) {
     validationCards.push({
-      label: "Saved run",
+      label: "Zapisany run",
       value: data.saved_result.run_id,
     });
   }
@@ -1209,17 +1230,17 @@ async function runSerializationExperiment(event) {
 
   if (!payload.transports.length) {
     serializationRunSummary.innerHTML =
-      `<div class="summary-card muted">Select at least one transport.</div>`;
+      `<div class="summary-card muted">Wybierz co najmniej jeden transport.</div>`;
     return;
   }
 
   if (!payload.operations.length) {
     serializationRunSummary.innerHTML =
-      `<div class="summary-card muted">Select at least one operation.</div>`;
+      `<div class="summary-card muted">Wybierz co najmniej jedną operację.</div>`;
     return;
   }
 
-  serializationRunSummary.innerHTML = `<div class="summary-card muted">Running experiment...</div>`;
+  serializationRunSummary.innerHTML = `<div class="summary-card muted">Trwa uruchamianie eksperymentu...</div>`;
   serializationRunJson.textContent = "Running experiment...";
 
   const response = await fetch(
@@ -1238,7 +1259,7 @@ async function runSerializationExperiment(event) {
   const data = await response.json();
 
   if (!response.ok) {
-    serializationRunSummary.innerHTML = `<div class="summary-card muted">Experiment failed.</div>`;
+    serializationRunSummary.innerHTML = `<div class="summary-card muted">Uruchomienie eksperymentu nie powiodło się.</div>`;
     serializationRunJson.textContent = JSON.stringify(data, null, 2);
     serializationRunTable.innerHTML = "";
     return;
@@ -1250,17 +1271,17 @@ async function runSerializationExperiment(event) {
   const fastestDeserialize = bestRowBy(data.measurements, "response_deserialize_summary.avg_us");
 
   const serializationCards = [
-    { label: "Iterations", value: String(data.iterations) },
-    { label: "Measurements", value: String(data.measurements.length) },
-    { label: "Smallest request", value: `${smallestRequest.transport}/${smallestRequest.operation} (${smallestRequest.request_size_bytes} B)` },
-    { label: "Fastest request serialize", value: `${fastestSerialize.transport}/${fastestSerialize.operation} (${fastestSerialize.request_serialize_summary.avg_us.toFixed(3)} us)` },
-    { label: "Smallest response", value: `${smallestResponse.transport}/${smallestResponse.operation} (${smallestResponse.response_size_bytes} B)` },
-    { label: "Fastest response deserialize", value: `${fastestDeserialize.transport}/${fastestDeserialize.operation} (${fastestDeserialize.response_deserialize_summary.avg_us.toFixed(3)} us)` },
+    { label: "Iteracje", value: String(data.iterations) },
+    { label: "Pomiary", value: String(data.measurements.length) },
+    { label: "Najmniejsze żądanie", value: `${smallestRequest.transport}/${smallestRequest.operation} (${smallestRequest.request_size_bytes} B)` },
+    { label: "Najszybsza serializacja żądania", value: `${fastestSerialize.transport}/${fastestSerialize.operation} (${fastestSerialize.request_serialize_summary.avg_us.toFixed(3)} us)` },
+    { label: "Najmniejsza odpowiedź", value: `${smallestResponse.transport}/${smallestResponse.operation} (${smallestResponse.response_size_bytes} B)` },
+    { label: "Najszybsza deserializacja odpowiedzi", value: `${fastestDeserialize.transport}/${fastestDeserialize.operation} (${fastestDeserialize.response_deserialize_summary.avg_us.toFixed(3)} us)` },
   ];
 
   if (data.saved_result) {
     serializationCards.push({
-      label: "Saved run",
+      label: "Zapisany run",
       value: data.saved_result.run_id,
     });
   }
@@ -1346,7 +1367,7 @@ async function loadReportsDashboard() {
       { label: "Fastest validation avg [us]", value: fastestValidation.avg_us.toFixed(3) },
       { label: "Slowest validation avg [us]", value: slowestValidation.avg_us.toFixed(3) },
       { label: "Scenarios loaded", value: String(validation.length) },
-      { label: "Fastest scenario", value: fastestValidation.scenario },
+      { label: "Najszybszy scenariusz", value: fastestValidation.scenario },
     ]);
 
     renderTable(
@@ -1422,8 +1443,14 @@ singleForm.addEventListener("submit", analyzeSingle);
 sequenceForm.addEventListener("submit", analyzeSequence);
 
 navOverhead.addEventListener("click", () => setMainView("overhead"));
-navTransport.addEventListener("click", () => setMainView("transport"));
-loadReportButton.addEventListener("click", loadSelectedReport);
+navExperiments.addEventListener("click", () => setMainView("experiments"));
+navEnvironment.addEventListener("click", () => setMainView("environment"));
+navHistory.addEventListener("click", () => setMainView("history"));
+if (loadReportButton) {
+  if (loadReportButton) {
+  loadReportButton.addEventListener("click", loadSelectedReport);
+}
+}
 
 requestResponseExperimentForm.addEventListener("submit", runRequestResponseExperiment);
 loadRequestResponseDefaultsButton.addEventListener("click", loadRequestResponseDefaults);
@@ -1452,3 +1479,4 @@ loadRealtimeDefaults();
 loadValidationDefaults();
 loadSerializationDefaults();
 loadEnvironmentDefaults();
+loadRecentRuns();

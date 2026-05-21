@@ -1,944 +1,683 @@
 <!DOCTYPE html>
+
 <html lang="pl">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Network Message Comparison — Research Dashboard</title>
-    <link rel="stylesheet" href="/static/styles.css" />
-  </head>
-  <body>
-    <div class="layout">
-      <aside class="sidebar">
-        <h1 class="app-title">Research Dashboard</h1>
-        <p class="app-subtitle">
-          Comparative analysis of message exchange methods
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Network Message Comparison — Panel badawczy</title>
+<link href="/static/styles.css" rel="stylesheet"/>
+</head>
+<body>
+<div class="layout">
+<aside class="sidebar">
+<h1 class="app-title">Panel badawczy</h1>
+<p class="app-subtitle">
+          Porównanie metod wymiany komunikatów w aplikacjach sieciowych
         </p>
-
-        <nav class="nav">
-          <button class="nav-item active" id="nav-overhead">
-            Transmission overhead
-          </button>
-          <button class="nav-item" id="nav-transport">
-            Transport comparison
-          </button>
-          <button class="nav-item" disabled>Realtime analysis</button>
-          <button class="nav-item" disabled>Validation analysis</button>
-          <button class="nav-item" disabled>Reports</button>
-        </nav>
-
-        <section class="presets-panel">
-          <h2>Presets</h2>
-          <div id="presets-content">Loading presets...</div>
-        </section>
-      </aside>
-
-      <main class="main-content">
-        <header class="page-header">
-          <div>
-            <h2 id="page-title">Transmission Overhead Calculator</h2>
-            <p id="page-description">
+<nav class="nav"><button class="nav-item active" id="nav-overhead">Model transmisji</button>
+<button class="nav-item" id="nav-experiments">Eksperymenty</button>
+<button class="nav-item" id="nav-environment">Środowisko</button>
+<button class="nav-item" id="nav-history">Historia uruchomień</button>
+</nav>
+<section class="presets-panel">
+<h2>Presety</h2>
+<div id="presets-content">Ładowanie presetów...</div>
+</section>
+</aside>
+<main class="main-content">
+<header class="page-header">
+<div>
+<h2 id="page-title">Model transmisji i narzutu</h2>
+<p id="page-description">
               Analiza narzutu transmisji dla pojedynczej wiadomości i sekwencji
               wiadomości w modelu Ethernet II + IPv4 + TCP.
             </p>
-          </div>
-          <div class="status-badge" id="api-status">Checking API...</div>
-        </header>
-
-        <section id="view-overhead">
-          <section class="panel">
-            <div class="mode-switch">
-              <button id="single-tab" class="tab-button active">Single message</button>
-              <button id="sequence-tab" class="tab-button">Sequence</button>
-            </div>
-
-            <div id="single-form-section">
-              <form id="single-form" class="form-grid">
-                <label>
-                  Application protocol
+</div>
+<div class="status-badge" id="api-status">Sprawdzanie API...</div>
+</header>
+<section id="view-overhead">
+<section class="panel">
+<div class="mode-switch">
+<button class="tab-button active" id="single-tab">Pojedyncza wiadomość</button>
+<button class="tab-button" id="sequence-tab">Sekwencja wiadomości</button>
+</div>
+<div id="single-form-section">
+<form class="form-grid" id="single-form">
+<label>
+                  Protokół aplikacyjny
                   <select name="application_protocol">
-                    <option value="http">HTTP</option>
-                    <option value="websocket">WebSocket</option>
-                    <option value="grpc">gRPC</option>
-                  </select>
-                </label>
-
-                <label>
-                  Payload encoding
+<option value="http">HTTP</option>
+<option value="websocket">WebSocket</option>
+<option value="grpc">gRPC</option>
+</select>
+</label>
+<label>
+                  Kodowanie ładunku
                   <select name="payload_encoding">
-                    <option value="json">JSON</option>
-                    <option value="protobuf">protobuf</option>
-                  </select>
-                </label>
-
-                <label>
-                  Transmission profile
+<option value="json">JSON</option>
+<option value="protobuf">protobuf</option>
+</select>
+</label>
+<label>
+                  Profil transmisji
                   <select name="transmission_profile">
-                    <option value="standard_ethernet">standard_ethernet</option>
-                    <option value="constrained_mtu">constrained_mtu</option>
-                    <option value="tcp_options_heavy">tcp_options_heavy</option>
-                    <option value="jumbo_frame">jumbo_frame</option>
-                  </select>
-                </label>
-
-                <label>
-                  Payload size [bytes]
-                  <input type="number" name="payload_size_bytes" value="10" min="1" />
-                </label>
-
-                <label>
-                  Message count
-                  <input type="number" name="message_count" value="1" min="1" />
-                </label>
-
-                <label>
-                  Message frequency [Hz]
-                  <input
-                    type="number"
-                    name="message_frequency_hz"
-                    value="100"
-                    min="0.0001"
-                    step="0.1"
-                  />
-                </label>
-
-                <div class="checkbox-group wide">
-                  <span class="checkbox-group-title">Advanced transmission settings</span>
-                </div>
-
-                <label>
-                  MTU [bytes]
-                  <input type="number" name="mtu_bytes" placeholder="auto from profile" min="68" />
-                </label>
-
-                <label>
-                  Application header overhead [bytes]
-                  <input type="number" name="application_header_overhead_bytes" placeholder="auto from protocol" min="0" />
-                </label>
-
-                <label>
-                  Ethernet header [bytes]
-                  <input type="number" name="ethernet_header_size_bytes" placeholder="auto" min="0" />
-                </label>
-
-                <label>
-                  Ethernet trailer [bytes]
-                  <input type="number" name="ethernet_trailer_size_bytes" placeholder="auto" min="0" />
-                </label>
-
-                <label>
-                  Ethernet minimum payload [bytes]
-                  <input type="number" name="ethernet_min_payload_bytes" placeholder="auto" min="0" />
-                </label>
-
-                <label>
-                  IPv4 header [bytes]
-                  <input type="number" name="ipv4_header_size_bytes" placeholder="auto" min="0" />
-                </label>
-
-                <label>
-                  TCP header [bytes]
-                  <input type="number" name="tcp_header_size_bytes" placeholder="auto" min="0" />
-                </label>
-
-                <button type="submit" class="primary-button">
-                  Analyze single message
+<option value="standard_ethernet">standard_ethernet</option>
+<option value="constrained_mtu">constrained_mtu</option>
+<option value="tcp_options_heavy">tcp_options_heavy</option>
+<option value="jumbo_frame">jumbo_frame</option>
+</select>
+</label>
+<label>
+                  Rozmiar ładunku [bajty]
+                  <input min="1" name="payload_size_bytes" type="number" value="10"/>
+</label>
+<label>
+                  Liczba wiadomości
+                  <input min="1" name="message_count" type="number" value="1"/>
+</label>
+<label>
+                  Częstotliwość wiadomości [Hz]
+                  <input min="0.0001" name="message_frequency_hz" step="0.1" type="number" value="100"/>
+</label>
+<div class="checkbox-group wide">
+<span class="checkbox-group-title">Zaawansowane ustawienia transmisji</span>
+</div>
+<label>
+                  MTU [bajty]
+                  <input min="68" name="mtu_bytes" placeholder="auto z profilu" type="number"/>
+</label>
+<label>
+                  Narzut nagłówka aplikacyjnego [bajty]
+                  <input min="0" name="application_header_overhead_bytes" placeholder="auto z protokołu" type="number"/>
+</label>
+<label>
+                  Nagłówek Ethernet [bajty]
+                  <input min="0" name="ethernet_header_size_bytes" placeholder="auto" type="number"/>
+</label>
+<label>
+                  Trailer Ethernet [bajty]
+                  <input min="0" name="ethernet_trailer_size_bytes" placeholder="auto" type="number"/>
+</label>
+<label>
+                  Minimalny payload Ethernet [bajty]
+                  <input min="0" name="ethernet_min_payload_bytes" placeholder="auto" type="number"/>
+</label>
+<label>
+                  Nagłówek IPv4 [bajty]
+                  <input min="0" name="ipv4_header_size_bytes" placeholder="auto" type="number"/>
+</label>
+<label>
+                  Nagłówek TCP [bajty]
+                  <input min="0" name="tcp_header_size_bytes" placeholder="auto" type="number"/>
+</label>
+<button class="primary-button" type="submit">
+                  Analizuj pojedynczą wiadomość
                 </button>
-              </form>
-            </div>
-
-            <div id="sequence-form-section" class="hidden">
-              <form id="sequence-form" class="form-grid">
-                <label class="wide">
+</form>
+</div>
+<div class="hidden" id="sequence-form-section">
+<form class="form-grid" id="sequence-form">
+<label class="wide">
                   Payload sizes [bytes, comma separated]
-                  <input
-                    type="text"
-                    name="payload_sizes_bytes"
-                    value="10,10,10,10,10,10"
-                  />
-                </label>
-
-                <label>
-                  Application protocol
+                  <input name="payload_sizes_bytes" type="text" value="10,10,10,10,10,10"/>
+</label>
+<label>
+                  Protokół aplikacyjny
                   <select name="application_protocol">
-                    <option value="http">HTTP</option>
-                    <option value="websocket">WebSocket</option>
-                    <option value="grpc">gRPC</option>
-                  </select>
-                </label>
-
-                <label>
-                  Payload encoding
+<option value="http">HTTP</option>
+<option value="websocket">WebSocket</option>
+<option value="grpc">gRPC</option>
+</select>
+</label>
+<label>
+                  Kodowanie ładunku
                   <select name="payload_encoding">
-                    <option value="json">JSON</option>
-                    <option value="protobuf">protobuf</option>
-                  </select>
-                </label>
-
-                <label>
-                  Transmission profile
+<option value="json">JSON</option>
+<option value="protobuf">protobuf</option>
+</select>
+</label>
+<label>
+                  Profil transmisji
                   <select name="transmission_profile">
-                    <option value="standard_ethernet">standard_ethernet</option>
-                    <option value="constrained_mtu">constrained_mtu</option>
-                    <option value="tcp_options_heavy">tcp_options_heavy</option>
-                    <option value="jumbo_frame">jumbo_frame</option>
-                  </select>
-                </label>
-
-                <label>
+<option value="standard_ethernet">standard_ethernet</option>
+<option value="constrained_mtu">constrained_mtu</option>
+<option value="tcp_options_heavy">tcp_options_heavy</option>
+<option value="jumbo_frame">jumbo_frame</option>
+</select>
+</label>
+<label>
                   Aggregation mode
                   <select name="aggregation_mode">
-                    <option value="per_message">per_message</option>
-                    <option value="batched">batched</option>
-                    <option value="nagle_like">nagle_like</option>
-                  </select>
-                </label>
-
-                <label>
+<option value="per_message">per_message</option>
+<option value="batched">batched</option>
+<option value="nagle_like">nagle_like</option>
+</select>
+</label>
+<label>
                   Batch size
-                  <input type="number" name="batch_size" value="3" min="1" />
-                </label>
-
-                <label>
-                  Message frequency [Hz]
-                  <input
-                    type="number"
-                    name="message_frequency_hz"
-                    value="100"
-                    min="0.0001"
-                    step="0.1"
-                  />
-                </label>
-
-                <div class="checkbox-group wide">
-                  <span class="checkbox-group-title">Advanced transmission settings</span>
-                </div>
-
-                <label>
-                  MTU [bytes]
-                  <input type="number" name="mtu_bytes" placeholder="auto from profile" min="68" />
-                </label>
-
-                <label>
-                  Application header overhead [bytes]
-                  <input type="number" name="application_header_overhead_bytes" placeholder="auto from protocol" min="0" />
-                </label>
-
-                <label>
-                  Ethernet header [bytes]
-                  <input type="number" name="ethernet_header_size_bytes" placeholder="auto" min="0" />
-                </label>
-
-                <label>
-                  Ethernet trailer [bytes]
-                  <input type="number" name="ethernet_trailer_size_bytes" placeholder="auto" min="0" />
-                </label>
-
-                <label>
-                  Ethernet minimum payload [bytes]
-                  <input type="number" name="ethernet_min_payload_bytes" placeholder="auto" min="0" />
-                </label>
-
-                <label>
-                  IPv4 header [bytes]
-                  <input type="number" name="ipv4_header_size_bytes" placeholder="auto" min="0" />
-                </label>
-
-                <label>
-                  TCP header [bytes]
-                  <input type="number" name="tcp_header_size_bytes" placeholder="auto" min="0" />
-                </label>
-
-                <button type="submit" class="primary-button">
-                  Analyze sequence
+                  <input min="1" name="batch_size" type="number" value="3"/>
+</label>
+<label>
+                  Częstotliwość wiadomości [Hz]
+                  <input min="0.0001" name="message_frequency_hz" step="0.1" type="number" value="100"/>
+</label>
+<div class="checkbox-group wide">
+<span class="checkbox-group-title">Zaawansowane ustawienia transmisji</span>
+</div>
+<label>
+                  MTU [bajty]
+                  <input min="68" name="mtu_bytes" placeholder="auto z profilu" type="number"/>
+</label>
+<label>
+                  Narzut nagłówka aplikacyjnego [bajty]
+                  <input min="0" name="application_header_overhead_bytes" placeholder="auto z protokołu" type="number"/>
+</label>
+<label>
+                  Nagłówek Ethernet [bajty]
+                  <input min="0" name="ethernet_header_size_bytes" placeholder="auto" type="number"/>
+</label>
+<label>
+                  Trailer Ethernet [bajty]
+                  <input min="0" name="ethernet_trailer_size_bytes" placeholder="auto" type="number"/>
+</label>
+<label>
+                  Minimalny payload Ethernet [bajty]
+                  <input min="0" name="ethernet_min_payload_bytes" placeholder="auto" type="number"/>
+</label>
+<label>
+                  Nagłówek IPv4 [bajty]
+                  <input min="0" name="ipv4_header_size_bytes" placeholder="auto" type="number"/>
+</label>
+<label>
+                  Nagłówek TCP [bajty]
+                  <input min="0" name="tcp_header_size_bytes" placeholder="auto" type="number"/>
+</label>
+<button class="primary-button" type="submit">
+                  Analizuj sekwencję
                 </button>
-              </form>
-            </div>
-          </section>
-
-          <section class="panel">
-            <h3>Summary</h3>
-            <div id="summary-cards" class="summary-grid">
-              <div class="summary-card muted">Run analysis to see results.</div>
-            </div>
-          </section>
-
-          <section class="panel">
-            <h3>Effective transmission settings</h3>
-            <div id="effective-settings-box" class="summary-grid">
-              <div class="summary-card muted">Run analysis to see effective settings.</div>
-            </div>
-          </section>
-
-          <section class="panel">
-            <h3>Detailed result</h3>
-            <pre id="result-json" class="result-box">No result yet.</pre>
-          </section>
-        </section>
-
-        <section id="view-transport" class="hidden">
-         <section class="panel">
-          <h3>Environment status</h3>
-          <form id="environment-status-form" class="form-grid">
-            <label>
-              HTTP health URL
-              <input
-                type="text"
-                name="http_health_url"
-                value="http://127.0.0.1:8000/health"
-              />
-            </label>
-
-            <label>
-              WebSocket health URL
-              <input
-                type="text"
-                name="ws_health_url"
-                value="http://127.0.0.1:8001/health"
-              />
-            </label>
-
-            <label>
-              gRPC address
-              <input
-                type="text"
-                name="grpc_address"
-                value="127.0.0.1:50051"
-              />
-            </label>
-
-            <label>
-              Timeout [s]
-              <input
-                type="number"
-                name="timeout_seconds"
-                value="2"
-                min="0.1"
-                max="10"
-                step="0.1"
-              />
-            </label>
-
-            <div class="form-actions wide">
-              <button
-                type="button"
-                id="load-environment-defaults"
-                class="primary-button secondary-button"
-              >
-                Load default config
-              </button>
-              <button
-                type="submit"
-                id="refresh-environment-status"
-                class="primary-button"
-              >
-                Refresh status
-              </button>
-            </div>
-          </form>
-        </section>
-
-        <section class="panel">
-          <h3>Environment summary</h3>
-          <div id="environment-status-summary" class="summary-grid">
-            <div class="summary-card muted">Refresh environment status to see results.</div>
-          </div>
-        </section>
-
-        <section class="panel">
-          <h3>Environment services</h3>
-          <div id="environment-status-table">
-            <div class="summary-card muted">Refresh environment status to see service details.</div>
-          </div>
-        </section>
-          <section class="panel">
-            <h3>Run request-response experiment</h3>
-            <form id="request-response-experiment-form" class="form-grid">
-              <label>
+</form>
+</div>
+</section>
+<section class="panel">
+<h3>Podsumowanie</h3>
+<div class="summary-grid" id="summary-cards">
+<div class="summary-card muted">Uruchom analizę, aby zobaczyć wyniki.</div>
+</div>
+</section>
+<section class="panel">
+<h3>Efektywne ustawienia transmisji</h3>
+<div class="summary-grid" id="effective-settings-box">
+<div class="summary-card muted">Uruchom analizę, aby zobaczyć efektywne ustawienia.</div>
+</div>
+</section>
+<section class="panel">
+<h3>Wynik szczegółowy</h3>
+<pre class="result-box" id="result-json">Brak wyniku.</pre>
+</section>
+</section>
+<section class="hidden" id="view-experiments"><section class="panel">
+<h3>Uruchom eksperyment request-response</h3>
+<form class="form-grid" id="request-response-experiment-form">
+<label>
                 Iterations
-                <input type="number" name="iterations" value="50" min="1" max="5000" />
-              </label>
-
-              <label>
+                <input max="5000" min="1" name="iterations" type="number" value="50"/>
+</label>
+<label>
                 Source
-                <input type="text" name="source" value="external_benchmark_client" />
-              </label>
-
-              <label>
+                <input name="source" type="text" value="external_benchmark_client"/>
+</label>
+<label>
                 Set value
-                <input type="number" name="set_value" value="42" min="0" max="1000" />
-              </label>
-
-              <label>
+                <input max="1000" min="0" name="set_value" type="number" value="42"/>
+</label>
+<label>
                 GET seed value
-                <input type="number" name="get_seed_value" value="77" min="0" max="1000" />
-              </label>
-
-              <label>
+                <input max="1000" min="0" name="get_seed_value" type="number" value="77"/>
+</label>
+<label>
                 HTTP base URL
-                <input type="text" name="http_base_url" value="http://127.0.0.1:8000" />
-              </label>
-
-              <label>
+                <input name="http_base_url" type="text" value="http://127.0.0.1:8000"/>
+</label>
+<label>
                 WebSocket URL
-                <input type="text" name="ws_url" value="ws://127.0.0.1:8001/ws/process" />
-              </label>
-
-              <label>
+                <input name="ws_url" type="text" value="ws://127.0.0.1:8001/ws/process"/>
+</label>
+<label>
                 gRPC address
-                <input type="text" name="grpc_address" value="127.0.0.1:50051" />
-              </label>
-
-              <label>
+                <input name="grpc_address" type="text" value="127.0.0.1:50051"/>
+</label>
+<label>
                 Set resource prefix
-                <input type="text" name="set_resource_prefix" value="rr_benchmark_set" />
-              </label>
-
-              <label>
+                <input name="set_resource_prefix" type="text" value="rr_benchmark_set"/>
+</label>
+<label>
                 GET resource prefix
-                <input type="text" name="get_resource_prefix" value="rr_benchmark_get" />
-              </label>
-
-              <div class="checkbox-group wide">
-                <span class="checkbox-group-title">Transports</span>
-                <label class="checkbox-inline">
-                  <input type="checkbox" name="transport_http" checked />
+                <input name="get_resource_prefix" type="text" value="rr_benchmark_get"/>
+</label>
+<div class="checkbox-group wide">
+<span class="checkbox-group-title">Transports</span>
+<label class="checkbox-inline">
+<input checked="" name="transport_http" type="checkbox"/>
                   HTTP
                 </label>
-                <label class="checkbox-inline">
-                  <input type="checkbox" name="transport_ws" checked />
+<label class="checkbox-inline">
+<input checked="" name="transport_ws" type="checkbox"/>
                   WebSocket
                 </label>
-                <label class="checkbox-inline">
-                  <input type="checkbox" name="transport_grpc" checked />
+<label class="checkbox-inline">
+<input checked="" name="transport_grpc" type="checkbox"/>
                   gRPC
                 </label>
-              </div>
-
-              <div class="checkbox-group wide">
-                <span class="checkbox-group-title">Persistence</span>
-                <label class="checkbox-inline">
-                  <input type="checkbox" name="request_response_save_result" />
+</div>
+<div class="checkbox-group wide">
+<span class="checkbox-group-title">Persistence</span>
+<label class="checkbox-inline">
+<input name="request_response_save_result" type="checkbox"/>
                   Save result
                 </label>
-              </div>
-
-              <label class="wide">
+</div>
+<label class="wide">
                 Run label
-                <input
-                  type="text"
-                  name="request_response_run_label"
-                  placeholder="e.g. rr_baseline_may20"
-                />
-              </label>
-
-              <div class="form-actions wide">
-                <button type="button" id="load-request-response-defaults" class="primary-button secondary-button">
-                  Load default config
+                <input name="request_response_run_label" placeholder="e.g. rr_baseline_may20" type="text"/>
+</label>
+<div class="form-actions wide">
+<button class="primary-button secondary-button" id="load-request-response-defaults" type="button">
+                  Wczytaj konfigurację domyślną
                 </button>
-                <button type="submit" class="primary-button">
+<button class="primary-button" type="submit">
                   Run request-response experiment
                 </button>
-              </div>
-            </form>
-          </section>
-
-          <section class="panel">
-            <h3>Last request-response experiment summary</h3>
-            <div id="request-response-run-summary" class="summary-grid">
-              <div class="summary-card muted">Run experiment to see results.</div>
-            </div>
-          </section>
-
-          <section class="panel">
-            <h3>Last request-response experiment results</h3>
-            <div id="request-response-run-table"></div>
-          </section>
-
-          <section class="panel">
-            <h3>Last request-response experiment JSON</h3>
-            <pre id="request-response-run-json" class="result-box">No experiment result yet.</pre>
-          </section>
-
-          <section class="panel">
-            <h3>Run realtime experiment</h3>
-            <form id="realtime-experiment-form" class="form-grid">
-              <label>
+</div>
+</form>
+</section>
+<section class="panel">
+<h3>Podsumowanie ostatniego eksperymentu request-response</h3>
+<div class="summary-grid" id="request-response-run-summary">
+<div class="summary-card muted">Run experiment to see results.</div>
+</div>
+</section>
+<section class="panel">
+<h3>Wyniki ostatniego eksperymentu request-response</h3>
+<div id="request-response-run-table"></div>
+</section>
+<section class="panel">
+<h3>JSON ostatniego eksperymentu request-response</h3>
+<pre class="result-box" id="request-response-run-json">No experiment result yet.</pre>
+</section>
+<section class="panel">
+<h3>Uruchom eksperyment realtime</h3>
+<form class="form-grid" id="realtime-experiment-form">
+<label>
                 Iterations
-                <input type="number" name="iterations" value="50" min="1" max="5000" />
-              </label>
-
-              <label>
+                <input max="5000" min="1" name="iterations" type="number" value="50"/>
+</label>
+<label>
                 Resource prefix
-                <input type="text" name="resource_prefix" value="realtime_benchmark" />
-              </label>
-
-              <label>
+                <input name="resource_prefix" type="text" value="realtime_benchmark"/>
+</label>
+<label>
                 First value
-                <input type="number" name="first_value" value="10" min="0" max="1000" />
-              </label>
-
-              <label>
+                <input max="1000" min="0" name="first_value" type="number" value="10"/>
+</label>
+<label>
                 Second value
-                <input type="number" name="second_value" value="20" min="0" max="1000" />
-              </label>
-
-              <label>
+                <input max="1000" min="0" name="second_value" type="number" value="20"/>
+</label>
+<label>
                 Third value
-                <input type="number" name="third_value" value="15" min="0" max="1000" />
-              </label>
-
-              <label>
+                <input max="1000" min="0" name="third_value" type="number" value="15"/>
+</label>
+<label>
                 HTTP base URL
-                <input type="text" name="http_base_url" value="http://127.0.0.1:8000" />
-              </label>
-
-              <label>
+                <input name="http_base_url" type="text" value="http://127.0.0.1:8000"/>
+</label>
+<label>
                 WebSocket changes URL
-                <input type="text" name="ws_changes_url" value="ws://127.0.0.1:8001/ws/changes" />
-              </label>
-
-              <label>
+                <input name="ws_changes_url" type="text" value="ws://127.0.0.1:8001/ws/changes"/>
+</label>
+<label>
                 WebSocket process URL
-                <input type="text" name="ws_process_url" value="ws://127.0.0.1:8001/ws/process" />
-              </label>
-
-              <label>
+                <input name="ws_process_url" type="text" value="ws://127.0.0.1:8001/ws/process"/>
+</label>
+<label>
                 gRPC address
-                <input type="text" name="grpc_address" value="127.0.0.1:50051" />
-              </label>
-
-              <div class="checkbox-group wide">
-                <span class="checkbox-group-title">Transports</span>
-                <label class="checkbox-inline">
-                  <input type="checkbox" name="realtime_transport_http" checked />
+                <input name="grpc_address" type="text" value="127.0.0.1:50051"/>
+</label>
+<div class="checkbox-group wide">
+<span class="checkbox-group-title">Transports</span>
+<label class="checkbox-inline">
+<input checked="" name="realtime_transport_http" type="checkbox"/>
                   HTTP
                 </label>
-                <label class="checkbox-inline">
-                  <input type="checkbox" name="realtime_transport_ws" checked />
+<label class="checkbox-inline">
+<input checked="" name="realtime_transport_ws" type="checkbox"/>
                   WebSocket
                 </label>
-                <label class="checkbox-inline">
-                  <input type="checkbox" name="realtime_transport_grpc" checked />
+<label class="checkbox-inline">
+<input checked="" name="realtime_transport_grpc" type="checkbox"/>
                   gRPC
                 </label>
-              </div>
-
-              <div class="checkbox-group wide">
-                <span class="checkbox-group-title">Persistence</span>
-                <label class="checkbox-inline">
-                  <input type="checkbox" name="realtime_save_result" />
+</div>
+<div class="checkbox-group wide">
+<span class="checkbox-group-title">Persistence</span>
+<label class="checkbox-inline">
+<input name="realtime_save_result" type="checkbox"/>
                   Save result
                 </label>
-              </div>
-
-              <label class="wide">
+</div>
+<label class="wide">
                 Run label
-                <input
-                  type="text"
-                  name="realtime_run_label"
-                  placeholder="e.g. realtime_non_empty_demo"
-                />
-              </label>
-
-              <div class="form-actions wide">
-                <button type="button" id="load-realtime-defaults" class="primary-button secondary-button">
-                  Load default config
+                <input name="realtime_run_label" placeholder="e.g. realtime_non_empty_demo" type="text"/>
+</label>
+<div class="form-actions wide">
+<button class="primary-button secondary-button" id="load-realtime-defaults" type="button">
+                  Wczytaj konfigurację domyślną
                 </button>
-                <button type="submit" class="primary-button">
+<button class="primary-button" type="submit">
                   Run realtime experiment
                 </button>
-              </div>
-            </form>
-          </section>
-
-          <section class="panel">
-            <h3>Last realtime experiment summary</h3>
-            <div id="realtime-run-summary" class="summary-grid">
-              <div class="summary-card muted">Run experiment to see results.</div>
-            </div>
-          </section>
-
-          <section class="panel">
-            <h3>Last realtime experiment results</h3>
-            <div id="realtime-run-table"></div>
-          </section>
-
-          <section class="panel">
-            <h3>Last realtime experiment JSON</h3>
-            <pre id="realtime-run-json" class="result-box">No experiment result yet.</pre>
-          </section>
-
-          <section class="panel">
-            <h3>Run validation experiment</h3>
-            <form id="validation-experiment-form" class="form-grid">
-              <label>
+</div>
+</form>
+</section>
+<section class="panel">
+<h3>Podsumowanie ostatniego eksperymentu realtime</h3>
+<div class="summary-grid" id="realtime-run-summary">
+<div class="summary-card muted">Run experiment to see results.</div>
+</div>
+</section>
+<section class="panel">
+<h3>Wyniki ostatniego eksperymentu realtime</h3>
+<div id="realtime-run-table"></div>
+</section>
+<section class="panel">
+<h3>JSON ostatniego eksperymentu realtime</h3>
+<pre class="result-box" id="realtime-run-json">No experiment result yet.</pre>
+</section>
+<section class="panel">
+<h3>Uruchom eksperyment walidacji</h3>
+<form class="form-grid" id="validation-experiment-form">
+<label>
                 Iterations
-                <input type="number" name="iterations" value="5000" min="1" max="200000" />
-              </label>
-
-              <label>
+                <input max="200000" min="1" name="iterations" type="number" value="5000"/>
+</label>
+<label>
                 Source
-                <input type="text" name="source" value="validation_benchmark_client" />
-              </label>
-
-              <label>
+                <input name="source" type="text" value="validation_benchmark_client"/>
+</label>
+<label>
                 Valid resource ID
-                <input type="text" name="valid_resource_id" value="validation_valid_set" />
-              </label>
-
-              <label>
+                <input name="valid_resource_id" type="text" value="validation_valid_set"/>
+</label>
+<label>
                 Readonly resource ID
-                <input type="text" name="readonly_resource_id" value="readonly_validation_target" />
-              </label>
-
-              <label>
+                <input name="readonly_resource_id" type="text" value="readonly_validation_target"/>
+</label>
+<label>
                 Valid value
-                <input type="number" name="valid_value" value="42" min="0" max="1000" />
-              </label>
-
-              <div class="checkbox-group wide">
-                <span class="checkbox-group-title">Scenarios</span>
-                <label class="checkbox-inline">
-                  <input type="checkbox" name="scenario_baseline_valid_dict" checked />
+                <input max="1000" min="0" name="valid_value" type="number" value="42"/>
+</label>
+<div class="checkbox-group wide">
+<span class="checkbox-group-title">Scenarios</span>
+<label class="checkbox-inline">
+<input checked="" name="scenario_baseline_valid_dict" type="checkbox"/>
                   baseline_valid_dict
                 </label>
-                <label class="checkbox-inline">
-                  <input type="checkbox" name="scenario_structural_validation_valid_set" checked />
+<label class="checkbox-inline">
+<input checked="" name="scenario_structural_validation_valid_set" type="checkbox"/>
                   structural_validation_valid_set
                 </label>
-                <label class="checkbox-inline">
-                  <input type="checkbox" name="scenario_full_validation_valid_set" checked />
+<label class="checkbox-inline">
+<input checked="" name="scenario_full_validation_valid_set" type="checkbox"/>
                   full_validation_valid_set
                 </label>
-                <label class="checkbox-inline">
-                  <input type="checkbox" name="scenario_structural_validation_invalid" checked />
+<label class="checkbox-inline">
+<input checked="" name="scenario_structural_validation_invalid" type="checkbox"/>
                   structural_validation_invalid
                 </label>
-                <label class="checkbox-inline">
-                  <input type="checkbox" name="scenario_business_validation_invalid" checked />
+<label class="checkbox-inline">
+<input checked="" name="scenario_business_validation_invalid" type="checkbox"/>
                   business_validation_invalid
                 </label>
-              </div>
-
-              <div class="checkbox-group wide">
-                <span class="checkbox-group-title">Persistence</span>
-                <label class="checkbox-inline">
-                  <input type="checkbox" name="validation_save_result" />
+</div>
+<div class="checkbox-group wide">
+<span class="checkbox-group-title">Persistence</span>
+<label class="checkbox-inline">
+<input name="validation_save_result" type="checkbox"/>
                   Save result
                 </label>
-              </div>
-
-              <label class="wide">
+</div>
+<label class="wide">
                 Run label
-                <input
-                  type="text"
-                  name="validation_run_label"
-                  placeholder="e.g. validation_fast_check"
-                />
-              </label>
-
-              <div class="form-actions wide">
-                <button type="button" id="load-validation-defaults" class="primary-button secondary-button">
-                  Load default config
+                <input name="validation_run_label" placeholder="e.g. validation_fast_check" type="text"/>
+</label>
+<div class="form-actions wide">
+<button class="primary-button secondary-button" id="load-validation-defaults" type="button">
+                  Wczytaj konfigurację domyślną
                 </button>
-                <button type="submit" class="primary-button">
+<button class="primary-button" type="submit">
                   Run validation experiment
                 </button>
-              </div>
-            </form>
-          </section>
-
-          <section class="panel">
-            <h3>Last validation experiment summary</h3>
-            <div id="validation-run-summary" class="summary-grid">
-              <div class="summary-card muted">Run experiment to see results.</div>
-            </div>
-          </section>
-
-          <section class="panel">
-            <h3>Last validation experiment results</h3>
-            <div id="validation-run-table"></div>
-          </section>
-
-          <section class="panel">
-            <h3>Last validation experiment JSON</h3>
-            <pre id="validation-run-json" class="result-box">No experiment result yet.</pre>
-          </section>
-
-          <section class="panel">
-            <h3>Run serialization experiment</h3>
-            <form id="serialization-experiment-form" class="form-grid">
-              <label>
+</div>
+</form>
+</section>
+<section class="panel">
+<h3>Podsumowanie ostatniego eksperymentu walidacji</h3>
+<div class="summary-grid" id="validation-run-summary">
+<div class="summary-card muted">Run experiment to see results.</div>
+</div>
+</section>
+<section class="panel">
+<h3>Wyniki ostatniego eksperymentu walidacji</h3>
+<div id="validation-run-table"></div>
+</section>
+<section class="panel">
+<h3>JSON ostatniego eksperymentu walidacji</h3>
+<pre class="result-box" id="validation-run-json">No experiment result yet.</pre>
+</section>
+<section class="panel">
+<h3>Uruchom eksperyment serializacji</h3>
+<form class="form-grid" id="serialization-experiment-form">
+<label>
                 Iterations
-                <input type="number" name="iterations" value="2000" min="1" max="100000" />
-              </label>
-
-              <label>
+                <input max="100000" min="1" name="iterations" type="number" value="2000"/>
+</label>
+<label>
                 Source
-                <input type="text" name="source" value="serialization_benchmark_client" />
-              </label>
-
-              <label>
+                <input name="source" type="text" value="serialization_benchmark_client"/>
+</label>
+<label>
                 Set value
-                <input type="number" name="set_value" value="42" min="0" max="1000" />
-              </label>
-
-              <label>
+                <input max="1000" min="0" name="set_value" type="number" value="42"/>
+</label>
+<label>
                 GET seed value
-                <input type="number" name="get_seed_value" value="77" min="0" max="1000" />
-              </label>
-
-              <label>
+                <input max="1000" min="0" name="get_seed_value" type="number" value="77"/>
+</label>
+<label>
                 HTTP base URL
-                <input type="text" name="http_base_url" value="http://127.0.0.1:8000" />
-              </label>
-
-              <label>
+                <input name="http_base_url" type="text" value="http://127.0.0.1:8000"/>
+</label>
+<label>
                 WebSocket URL
-                <input type="text" name="ws_url" value="ws://127.0.0.1:8001/ws/process" />
-              </label>
-
-              <label>
+                <input name="ws_url" type="text" value="ws://127.0.0.1:8001/ws/process"/>
+</label>
+<label>
                 gRPC address
-                <input type="text" name="grpc_address" value="127.0.0.1:50051" />
-              </label>
-
-              <label>
+                <input name="grpc_address" type="text" value="127.0.0.1:50051"/>
+</label>
+<label>
                 Set resource prefix
-                <input type="text" name="set_resource_prefix" value="serialization_set" />
-              </label>
-
-              <label>
+                <input name="set_resource_prefix" type="text" value="serialization_set"/>
+</label>
+<label>
                 GET resource prefix
-                <input type="text" name="get_resource_prefix" value="serialization_get" />
-              </label>
-
-              <div class="checkbox-group wide">
-                <span class="checkbox-group-title">Transports</span>
-                <label class="checkbox-inline">
-                  <input type="checkbox" name="serialization_transport_http" checked />
+                <input name="get_resource_prefix" type="text" value="serialization_get"/>
+</label>
+<div class="checkbox-group wide">
+<span class="checkbox-group-title">Transports</span>
+<label class="checkbox-inline">
+<input checked="" name="serialization_transport_http" type="checkbox"/>
                   HTTP
                 </label>
-                <label class="checkbox-inline">
-                  <input type="checkbox" name="serialization_transport_ws" checked />
+<label class="checkbox-inline">
+<input checked="" name="serialization_transport_ws" type="checkbox"/>
                   WebSocket
                 </label>
-                <label class="checkbox-inline">
-                  <input type="checkbox" name="serialization_transport_grpc" checked />
+<label class="checkbox-inline">
+<input checked="" name="serialization_transport_grpc" type="checkbox"/>
                   gRPC
                 </label>
-              </div>
-
-              <div class="checkbox-group wide">
-                <span class="checkbox-group-title">Operations</span>
-                <label class="checkbox-inline">
-                  <input type="checkbox" name="serialization_operation_set_value" checked />
+</div>
+<div class="checkbox-group wide">
+<span class="checkbox-group-title">Operations</span>
+<label class="checkbox-inline">
+<input checked="" name="serialization_operation_set_value" type="checkbox"/>
                   set_value
                 </label>
-                <label class="checkbox-inline">
-                  <input type="checkbox" name="serialization_operation_get_value" checked />
+<label class="checkbox-inline">
+<input checked="" name="serialization_operation_get_value" type="checkbox"/>
                   get_value
                 </label>
-              </div>
-
-              <div class="checkbox-group wide">
-                <span class="checkbox-group-title">Persistence</span>
-                <label class="checkbox-inline">
-                  <input type="checkbox" name="serialization_save_result" />
+</div>
+<div class="checkbox-group wide">
+<span class="checkbox-group-title">Persistence</span>
+<label class="checkbox-inline">
+<input name="serialization_save_result" type="checkbox"/>
                   Save result
                 </label>
-              </div>
-
-              <label class="wide">
+</div>
+<label class="wide">
                 Run label
-                <input
-                  type="text"
-                  name="serialization_run_label"
-                  placeholder="e.g. serialization_http_set"
-                />
-              </label>
-
-              <div class="form-actions wide">
-                <button type="button" id="load-serialization-defaults" class="primary-button secondary-button">
-                  Load default config
+                <input name="serialization_run_label" placeholder="e.g. serialization_http_set" type="text"/>
+</label>
+<div class="form-actions wide">
+<button class="primary-button secondary-button" id="load-serialization-defaults" type="button">
+                  Wczytaj konfigurację domyślną
                 </button>
-                <button type="submit" class="primary-button">
+<button class="primary-button" type="submit">
                   Run serialization experiment
                 </button>
-              </div>
-            </form>
-          </section>
-
-          <section class="panel">
-            <h3>Last serialization experiment summary</h3>
-            <div id="serialization-run-summary" class="summary-grid">
-              <div class="summary-card muted">Run experiment to see results.</div>
-            </div>
-          </section>
-
-          <section class="panel">
-            <h3>Last serialization experiment results</h3>
-            <div id="serialization-run-table"></div>
-          </section>
-
-          <section class="panel">
-            <h3>Last serialization experiment JSON</h3>
-            <pre id="serialization-run-json" class="result-box">No experiment result yet.</pre>
-          </section>
-
-          <section class="panel">
-            <h3>Recent saved runs</h3>
-
-            <form id="recent-runs-form" class="form-grid">
-              <label>
-                Limit
-                <input
-                  type="number"
-                  name="limit"
-                  value="10"
-                  min="1"
-                  max="200"
-                />
-              </label>
-
-              <label>
-                Experiment filter
-                <select name="experiment_name">
-                  <option value="">all</option>
-                  <option value="request_response">request_response</option>
-                  <option value="realtime">realtime</option>
-                  <option value="validation">validation</option>
-                  <option value="serialization">serialization</option>
-                </select>
-              </label>
-
-              <div class="form-actions wide">
-                <button
-                  type="submit"
-                  id="refresh-recent-runs"
-                  class="primary-button"
-                >
-                  Refresh recent runs
-                </button>
-              </div>
-            </form>
-          </section>
-
-          <section class="panel">
-            <h3>Recent runs summary</h3>
-            <div id="recent-runs-summary" class="summary-grid">
-              <div class="summary-card muted">Refresh recent runs to see saved history.</div>
-            </div>
-          </section>
-
-          <section class="panel">
-            <h3>Recent runs table</h3>
-            <div id="recent-runs-table">
-              <div class="summary-card muted">Refresh recent runs to see saved history.</div>
-            </div>
-          </section>
-
-
-          <section class="panel">
-            <h3>Saved run details</h3>
-
-            <form id="saved-run-detail-form" class="form-grid">
-              <label class="wide">
-                Run ID
-                <input
-                  type="text"
-                  name="run_id"
-                  placeholder="Paste run_id or use Load button from recent runs"
-                />
-              </label>
-
-              <div class="form-actions wide">
-                <button
-                  type="submit"
-                  id="load-saved-run-detail"
-                  class="primary-button"
-                >
-                  Load selected run
-                </button>
-              </div>
-            </form>
-          </section>
-
-          <section class="panel">
-            <h3>Saved run detail summary</h3>
-            <div id="saved-run-detail-summary" class="summary-grid">
-              <div class="summary-card muted">Load a saved run to see details.</div>
-            </div>
-          </section>
-
-          <section class="panel">
-            <h3>Saved run detail JSON</h3>
-            <pre id="saved-run-detail-json" class="result-box">No saved run loaded.</pre>
-          </section>
-
-          <section class="panel">
-            <h3>Available reports</h3>
-            <div id="available-reports" class="summary-grid">
-              <div class="summary-card muted">Loading reports...</div>
-            </div>
-          </section>
-
-          <section class="panel">
-            <h3>Top-level insights</h3>
-            <div id="insights-cards" class="summary-grid">
-              <div class="summary-card muted">Loading insights...</div>
-            </div>
-          </section>
-
-          <section class="panel">
-            <h3>Request-response summary</h3>
-            <div id="transport-summary-cards" class="summary-grid">
-              <div class="summary-card muted">Loading request-response data...</div>
-            </div>
-            <div id="request-response-table"></div>
-          </section>
-
-          <section class="panel">
-            <h3>Realtime summary</h3>
-            <div id="realtime-summary-cards" class="summary-grid">
-              <div class="summary-card muted">Loading realtime data...</div>
-            </div>
-            <div id="realtime-table"></div>
-          </section>
-
-          <section class="panel">
-            <h3>Validation cost summary</h3>
-            <div id="validation-summary-cards" class="summary-grid">
-              <div class="summary-card muted">Loading validation data...</div>
-            </div>
-            <div id="validation-table"></div>
-          </section>
-
-          <section class="panel">
-            <h3>Report viewer</h3>
-            <div class="report-viewer-controls">
-              <label>
-                Report
-                <select id="report-select">
-                  <option value="interpretation">interpretation</option>
-                  <option value="combined">combined</option>
-                  <option value="request-response">request-response</option>
-                  <option value="realtime-fetch">realtime-fetch</option>
-                  <option value="message-size">message-size</option>
-                  <option value="validation-cost">validation-cost</option>
-                  <option value="overhead-demo">overhead-demo</option>
-                </select>
-              </label>
-              <button id="load-report-button" class="primary-button secondary-button">
-                Load report
+</div>
+</form>
+</section>
+<section class="panel">
+<h3>Podsumowanie ostatniego eksperymentu serializacji</h3>
+<div class="summary-grid" id="serialization-run-summary">
+<div class="summary-card muted">Run experiment to see results.</div>
+</div>
+</section>
+<section class="panel">
+<h3>Wyniki ostatniego eksperymentu serializacji</h3>
+<div id="serialization-run-table"></div>
+</section>
+<section class="panel">
+<h3>JSON ostatniego eksperymentu serializacji</h3>
+<pre class="result-box" id="serialization-run-json">No experiment result yet.</pre>
+</section>
+</section><section class="hidden" id="view-environment"><section class="panel">
+<h3>Status środowiska</h3>
+<form class="form-grid" id="environment-status-form">
+<label>
+              URL health HTTP
+              <input name="http_health_url" type="text" value="http://127.0.0.1:8000/health"/>
+</label>
+<label>
+              URL health WebSocket
+              <input name="ws_health_url" type="text" value="http://127.0.0.1:8001/health"/>
+</label>
+<label>
+              gRPC address
+              <input name="grpc_address" type="text" value="127.0.0.1:50051"/>
+</label>
+<label>
+              Timeout [s]
+              <input max="10" min="0.1" name="timeout_seconds" step="0.1" type="number" value="2"/>
+</label>
+<div class="form-actions wide">
+<button class="primary-button secondary-button" id="load-environment-defaults" type="button">
+                Wczytaj konfigurację domyślną
               </button>
-            </div>
-            <pre id="report-viewer" class="result-box">Choose a report to preview.</pre>
-          </section>
-        </section>
-      </main>
-    </div>
-
-    <script src="/static/app.js"></script>
-  </body>
+<button class="primary-button" id="refresh-environment-status" type="submit">
+                Odśwież status
+              </button>
+</div>
+</form>
+</section>
+<section class="panel">
+<h3>Podsumowanie środowiska</h3>
+<div class="summary-grid" id="environment-status-summary">
+<div class="summary-card muted">Odśwież status środowiska, aby zobaczyć wyniki.</div>
+</div>
+</section>
+<section class="panel">
+<h3>Usługi środowiska</h3>
+<div id="environment-status-table">
+<div class="summary-card muted">Odśwież status środowiska, aby zobaczyć szczegóły usług.</div>
+</div>
+</section>
+</section><section class="hidden" id="view-history"><section class="panel">
+<h3>Ostatnie zapisane uruchomienia</h3>
+<form class="form-grid" id="recent-runs-form">
+<label>
+                Limit
+                <input max="200" min="1" name="limit" type="number" value="10"/>
+</label>
+<label>
+                Filtr eksperymentu
+                <select name="experiment_name">
+<option value="">wszystkie</option>
+<option value="request_response">request_response</option>
+<option value="realtime">realtime</option>
+<option value="validation">validation</option>
+<option value="serialization">serialization</option>
+</select>
+</label>
+<div class="form-actions wide">
+<button class="primary-button" id="refresh-recent-runs" type="submit">
+                  Odśwież listę uruchomień
+                </button>
+</div>
+</form>
+</section>
+<section class="panel">
+<h3>Podsumowanie zapisanych uruchomień</h3>
+<div class="summary-grid" id="recent-runs-summary">
+<div class="summary-card muted">Odśwież listę uruchomień to see saved history.</div>
+</div>
+</section>
+<section class="panel">
+<h3>Tabela zapisanych uruchomień</h3>
+<div id="recent-runs-table">
+<div class="summary-card muted">Odśwież listę uruchomień to see saved history.</div>
+</div>
+</section>
+<section class="panel">
+<h3>Szczegóły zapisanego uruchomienia</h3>
+<form class="form-grid" id="saved-run-detail-form">
+<label class="wide">
+                ID uruchomienia
+                <input name="run_id" placeholder="Wklej run_id albo użyj przycisku Wczytaj z tabeli" type="text"/>
+</label>
+<div class="form-actions wide">
+<button class="primary-button" id="load-saved-run-detail" type="submit">
+                  Wczytaj wybrane uruchomienie
+                </button>
+</div>
+</form>
+</section>
+<section class="panel">
+<h3>Podsumowanie zapisanego uruchomienia</h3>
+<div class="summary-grid" id="saved-run-detail-summary">
+<div class="summary-card muted">Wczytaj zapisane uruchomienie, aby zobaczyć szczegóły.</div>
+</div>
+</section>
+<section class="panel">
+<h3>JSON zapisanego uruchomienia</h3>
+<pre class="result-box" id="saved-run-detail-json">Nie wczytano zapisanego uruchomienia.</pre>
+</section>
+</section>
+</main>
+</div>
+<script src="/static/app.js"></script>
+</body>
 </html>

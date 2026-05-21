@@ -1,8 +1,7 @@
 from pathlib import Path
 import json
-from fastapi import HTTPException, Query
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -47,6 +46,7 @@ from app.orchestration.models import (
     ServiceStatusCheckConfig,
 )
 from app.orchestration.service_status import check_environment_services
+
 
 class PresetsResponse(BaseModel):
     layer_presets: dict
@@ -156,6 +156,7 @@ def get_report(report_key: str):
 
     raise HTTPException(status_code=400, detail="Unsupported report format")
 
+
 @app.get("/experiments/request-response/default-config")
 def get_request_response_default_config() -> RequestResponseExperimentConfig:
     return RequestResponseExperimentConfig()
@@ -180,6 +181,7 @@ def run_request_response_endpoint(
         results["saved_result"] = None
 
     return results
+
 
 @app.get("/experiments/realtime/default-config")
 def get_realtime_default_config() -> RealtimeFetchExperimentConfig:
@@ -206,6 +208,7 @@ def run_realtime_endpoint(
 
     return results
 
+
 @app.get("/experiments/validation/default-config")
 def get_validation_default_config() -> ValidationExperimentConfig:
     return ValidationExperimentConfig()
@@ -230,6 +233,7 @@ def run_validation_endpoint(
         results["saved_result"] = None
 
     return results
+
 
 @app.get("/experiments/serialization/default-config")
 def get_serialization_default_config() -> SerializationExperimentConfig:
@@ -256,6 +260,7 @@ def run_serialization_endpoint(
 
     return results
 
+
 @app.get(
     "/environment/services/default-config",
     response_model=ServiceStatusCheckConfig,
@@ -281,6 +286,7 @@ def check_environment_services_endpoint(
 ) -> EnvironmentServiceStatusResponse:
     return check_environment_services(config)
 
+
 @app.get(
     "/experiment-runs/recent",
     response_model=SavedExperimentRunsResponse,
@@ -290,6 +296,7 @@ def get_recent_experiment_runs(
     experiment_name: str | None = Query(default=None),
 ) -> SavedExperimentRunsResponse:
     return list_saved_runs(limit=limit, experiment_name=experiment_name)
+
 
 @app.get(
     "/experiment-runs/{run_id}",
