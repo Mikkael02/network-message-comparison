@@ -1,6 +1,6 @@
 from pathlib import Path
 import json
-from fastapi import Query
+from fastapi import HTTPException, Query
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
@@ -29,9 +29,11 @@ from app.experiments.models import (
     ValidationExperimentConfig,
     SerializationExperimentConfig,
     SavedExperimentRunsResponse,
+    SavedExperimentRunDetailResponse,
 )
 from app.experiments.storage import (
     list_saved_runs,
+    read_saved_run,
     save_experiment_run,
 )
 
@@ -288,3 +290,15 @@ def get_recent_experiment_runs(
     experiment_name: str | None = Query(default=None),
 ) -> SavedExperimentRunsResponse:
     return list_saved_runs(limit=limit, experiment_name=experiment_name)
+
+@app.get(
+    "/experiment-runs/{run_id}",
+    response_model=SavedExperimentRunDetailResponse,
+)
+def get_saved_experiment_run(run_id: str) -> SavedExperimentRunDetailResponse:
+    try:
+        return read_saved_run(run_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc

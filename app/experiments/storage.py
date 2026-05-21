@@ -7,6 +7,7 @@ import re
 import uuid
 
 from app.experiments.models import (
+    SavedExperimentRunDetailResponse,
     SavedExperimentRunMetadata,
     SavedExperimentRunsResponse,
 )
@@ -72,6 +73,23 @@ def build_stored_file_path(output_path: Path, base_dir: Path) -> str:
             return str(output_path.relative_to(base_dir)).replace("\\", "/")
         except ValueError:
             return str(output_path).replace("\\", "/")
+
+
+def resolve_stored_file_path(file_path: str, base_dir: Path = DEFAULT_RUNS_DIR) -> Path:
+    candidate = Path(file_path)
+
+    if candidate.is_absolute():
+        return candidate
+
+    project_relative = PROJECT_ROOT / candidate
+    if project_relative.exists():
+        return project_relative
+
+    base_relative = base_dir / candidate
+    if base_relative.exists():
+        return base_relative
+
+    return project_relative
 
 
 def save_experiment_run(
@@ -142,4 +160,37 @@ def list_saved_runs(
     return SavedExperimentRunsResponse(
         total_count=len(entries),
         runs=[SavedExperimentRunMetadata(**entry) for entry in selected],
+    )
+
+
+def read_saved_run(
+    run_id: str,
+    base_dir: Path = DEFAULT_RUNS_DIR,
+) -> SavedExperimentRunDetailResponse:
+    ensure_runs_storage(base_dir)
+
+    index_path = base_dir / "index.json"
+    entries = load_run_index(index_path)
+
+    matched = next((entry for entry in entries if entry["run_id"] == run_id), None)
+    if matched is None:
+        raise FileNotFoundError(f"Saved run not found: {run_id}")
+
+    metadata = SavedExperimentRunMetadata(**matched)
+    resolved_path = resolve_stored_file_path(metadata.file_path, base_dir=base_dir)
+
+    if not resolved_path.exists():
+        raise FileNotFoundError(
+            f"Saved run file does not exist for run_id={run_id}: {resolved_path}"
+        )
+
+    with resolved_path.open("r", encoding="utf-8") as f:
+        payload = json.load(f)
+
+    if "metadata" not in payload or "results" not in payload:
+        raise ValueError("Saved run payload must contain 'metadata' and 'results'")
+
+    return SavedExperimentRunDetailResponse(
+        metadata=SavedExperimentRunMetadata(**payload["metadata"]),
+        results=payload["results"],
     )

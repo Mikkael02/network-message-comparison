@@ -173,3 +173,7 @@ class SavedExperimentRunMetadata(BaseModel):
 class SavedExperimentRunsResponse(BaseModel):
     total_count: int
     runs: list[SavedExperimentRunMetadata]
+
+class SavedExperimentRunDetailResponse(BaseModel):
+    metadata: SavedExperimentRunMetadata
+    results: dict

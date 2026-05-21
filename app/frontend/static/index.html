@@ -414,6 +414,23 @@
                 </label>
               </div>
 
+              <div class="checkbox-group wide">
+                <span class="checkbox-group-title">Persistence</span>
+                <label class="checkbox-inline">
+                  <input type="checkbox" name="request_response_save_result" />
+                  Save result
+                </label>
+              </div>
+
+              <label class="wide">
+                Run label
+                <input
+                  type="text"
+                  name="request_response_run_label"
+                  placeholder="e.g. rr_baseline_may20"
+                />
+              </label>
+
               <div class="form-actions wide">
                 <button type="button" id="load-request-response-defaults" class="primary-button secondary-button">
                   Load default config
@@ -506,6 +523,23 @@
                 </label>
               </div>
 
+              <div class="checkbox-group wide">
+                <span class="checkbox-group-title">Persistence</span>
+                <label class="checkbox-inline">
+                  <input type="checkbox" name="realtime_save_result" />
+                  Save result
+                </label>
+              </div>
+
+              <label class="wide">
+                Run label
+                <input
+                  type="text"
+                  name="realtime_run_label"
+                  placeholder="e.g. realtime_non_empty_demo"
+                />
+              </label>
+
               <div class="form-actions wide">
                 <button type="button" id="load-realtime-defaults" class="primary-button secondary-button">
                   Load default config
@@ -585,6 +619,23 @@
                   business_validation_invalid
                 </label>
               </div>
+
+              <div class="checkbox-group wide">
+                <span class="checkbox-group-title">Persistence</span>
+                <label class="checkbox-inline">
+                  <input type="checkbox" name="validation_save_result" />
+                  Save result
+                </label>
+              </div>
+
+              <label class="wide">
+                Run label
+                <input
+                  type="text"
+                  name="validation_run_label"
+                  placeholder="e.g. validation_fast_check"
+                />
+              </label>
 
               <div class="form-actions wide">
                 <button type="button" id="load-validation-defaults" class="primary-button secondary-button">
@@ -690,6 +741,23 @@
                 </label>
               </div>
 
+              <div class="checkbox-group wide">
+                <span class="checkbox-group-title">Persistence</span>
+                <label class="checkbox-inline">
+                  <input type="checkbox" name="serialization_save_result" />
+                  Save result
+                </label>
+              </div>
+
+              <label class="wide">
+                Run label
+                <input
+                  type="text"
+                  name="serialization_run_label"
+                  placeholder="e.g. serialization_http_set"
+                />
+              </label>
+
               <div class="form-actions wide">
                 <button type="button" id="load-serialization-defaults" class="primary-button secondary-button">
                   Load default config
@@ -716,6 +784,96 @@
           <section class="panel">
             <h3>Last serialization experiment JSON</h3>
             <pre id="serialization-run-json" class="result-box">No experiment result yet.</pre>
+          </section>
+
+          <section class="panel">
+            <h3>Recent saved runs</h3>
+
+            <form id="recent-runs-form" class="form-grid">
+              <label>
+                Limit
+                <input
+                  type="number"
+                  name="limit"
+                  value="10"
+                  min="1"
+                  max="200"
+                />
+              </label>
+
+              <label>
+                Experiment filter
+                <select name="experiment_name">
+                  <option value="">all</option>
+                  <option value="request_response">request_response</option>
+                  <option value="realtime">realtime</option>
+                  <option value="validation">validation</option>
+                  <option value="serialization">serialization</option>
+                </select>
+              </label>
+
+              <div class="form-actions wide">
+                <button
+                  type="submit"
+                  id="refresh-recent-runs"
+                  class="primary-button"
+                >
+                  Refresh recent runs
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <section class="panel">
+            <h3>Recent runs summary</h3>
+            <div id="recent-runs-summary" class="summary-grid">
+              <div class="summary-card muted">Refresh recent runs to see saved history.</div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <h3>Recent runs table</h3>
+            <div id="recent-runs-table">
+              <div class="summary-card muted">Refresh recent runs to see saved history.</div>
+            </div>
+          </section>
+
+
+          <section class="panel">
+            <h3>Saved run details</h3>
+
+            <form id="saved-run-detail-form" class="form-grid">
+              <label class="wide">
+                Run ID
+                <input
+                  type="text"
+                  name="run_id"
+                  placeholder="Paste run_id or use Load button from recent runs"
+                />
+              </label>
+
+              <div class="form-actions wide">
+                <button
+                  type="submit"
+                  id="load-saved-run-detail"
+                  class="primary-button"
+                >
+                  Load selected run
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <section class="panel">
+            <h3>Saved run detail summary</h3>
+            <div id="saved-run-detail-summary" class="summary-grid">
+              <div class="summary-card muted">Load a saved run to see details.</div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <h3>Saved run detail JSON</h3>
+            <pre id="saved-run-detail-json" class="result-box">No saved run loaded.</pre>
           </section>
 
           <section class="panel">

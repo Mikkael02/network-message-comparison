@@ -56,6 +56,12 @@ const environmentStatusForm = document.getElementById("environment-status-form")
 const loadEnvironmentDefaultsButton = document.getElementById("load-environment-defaults");
 const environmentStatusSummary = document.getElementById("environment-status-summary");
 const environmentStatusTable = document.getElementById("environment-status-table");
+const recentRunsForm = document.getElementById("recent-runs-form");
+const recentRunsSummary = document.getElementById("recent-runs-summary");
+const recentRunsTable = document.getElementById("recent-runs-table");
+const savedRunDetailForm = document.getElementById("saved-run-detail-form");
+const savedRunDetailSummary = document.getElementById("saved-run-detail-summary");
+const savedRunDetailJson = document.getElementById("saved-run-detail-json");
 
 function setMode(mode) {
   const singleActive = mode === "single";
@@ -117,6 +123,42 @@ function buildEnvironmentStatusPayload(formData) {
     grpc_address: formData.get("grpc_address"),
     timeout_seconds: Number(formData.get("timeout_seconds")),
   };
+}
+
+function getPersistenceOptions(form, checkboxName, runLabelName) {
+  const saveResult = form.querySelector(`input[name="${checkboxName}"]`).checked;
+  const runLabel = form.querySelector(`input[name="${runLabelName}"]`).value.trim();
+
+  return {
+    saveResult,
+    runLabel,
+  };
+}
+
+function buildExperimentRunUrl(basePath, saveResult, runLabel) {
+  const params = new URLSearchParams();
+
+  if (saveResult) {
+    params.set("save_result", "true");
+  }
+
+  if (runLabel) {
+    params.set("run_label", runLabel);
+  }
+
+  const query = params.toString();
+  return query ? `${basePath}?${query}` : basePath;
+}
+
+function buildRecentRunsUrl(limit, experimentName) {
+  const params = new URLSearchParams();
+  params.set("limit", String(limit));
+
+  if (experimentName) {
+    params.set("experiment_name", experimentName);
+  }
+
+  return `/experiment-runs/recent?${params.toString()}`;
 }
 
 function renderResult(data) {
@@ -639,6 +681,138 @@ async function loadEnvironmentDefaults() {
   }
 }
 
+async function loadRecentRuns(event = null) {
+  if (event) {
+    event.preventDefault();
+  }
+
+  recentRunsSummary.innerHTML =
+    `<div class="summary-card muted">Loading recent runs...</div>`;
+  recentRunsTable.innerHTML = "";
+
+  try {
+    const formData = new FormData(recentRunsForm);
+    const limit = Number(formData.get("limit"));
+    const experimentName = formData.get("experiment_name");
+
+    const response = await fetch(buildRecentRunsUrl(limit, experimentName));
+    const data = await response.json();
+
+    if (!response.ok) {
+      recentRunsSummary.innerHTML =
+        `<div class="summary-card muted">Could not load recent runs.</div>`;
+      recentRunsTable.innerHTML =
+        `<div class="summary-card muted">${JSON.stringify(data)}</div>`;
+      return;
+    }
+
+    renderCardGroup(recentRunsSummary, [
+      {
+        label: "Total matching runs",
+        value: String(data.total_count),
+      },
+      {
+        label: "Displayed runs",
+        value: String(data.runs.length),
+      },
+      {
+        label: "Filter",
+        value: experimentName || "all",
+      },
+      {
+        label: "Limit",
+        value: String(limit),
+      },
+    ]);
+
+    renderTable(
+      recentRunsTable,
+      [
+        { key: "experiment_name", label: "Experiment" },
+        { key: "run_id", label: "Run ID" },
+        {
+          key: "run_label",
+          label: "Run label",
+          render: (row) => row.run_label || "-",
+        },
+        { key: "saved_at", label: "Saved at" },
+        { key: "file_path", label: "File path" },
+        {
+          key: "actions",
+          label: "Action",
+          render: (row) =>
+            `<button class="primary-button secondary-button load-run-detail-button" data-run-id="${row.run_id}">Load</button>`,
+        },
+      ],
+      data.runs
+    );
+
+    const loadButtons = recentRunsTable.querySelectorAll(".load-run-detail-button");
+    loadButtons.forEach((button) => {
+      button.addEventListener("click", async () => {
+        const runId = button.getAttribute("data-run-id");
+        await loadSavedRunDetailById(runId);
+      });
+    });
+  } catch (error) {
+    recentRunsSummary.innerHTML =
+      `<div class="summary-card muted">Could not load recent runs.</div>`;
+    recentRunsTable.innerHTML =
+      `<div class="summary-card muted">${error}</div>`;
+  }
+}
+
+async function loadSavedRunDetailById(runId) {
+  if (!runId) {
+    savedRunDetailSummary.innerHTML =
+      `<div class="summary-card muted">Provide a run ID first.</div>`;
+    savedRunDetailJson.textContent = "No saved run loaded.";
+    return;
+  }
+
+  savedRunDetailSummary.innerHTML =
+    `<div class="summary-card muted">Loading saved run...</div>`;
+  savedRunDetailJson.textContent = "Loading saved run...";
+
+  try {
+    const response = await fetch(`/experiment-runs/${encodeURIComponent(runId)}`);
+    const data = await response.json();
+
+    if (!response.ok) {
+      savedRunDetailSummary.innerHTML =
+        `<div class="summary-card muted">Could not load saved run.</div>`;
+      savedRunDetailJson.textContent = JSON.stringify(data, null, 2);
+      return;
+    }
+
+    renderCardGroup(savedRunDetailSummary, [
+      { label: "Experiment", value: data.metadata.experiment_name },
+      { label: "Run ID", value: data.metadata.run_id },
+      { label: "Run label", value: data.metadata.run_label || "-" },
+      { label: "Saved at", value: data.metadata.saved_at },
+      { label: "File path", value: data.metadata.file_path },
+    ]);
+
+    savedRunDetailJson.textContent = JSON.stringify(data, null, 2);
+    savedRunDetailForm.querySelector('input[name="run_id"]').value =
+      data.metadata.run_id;
+  } catch (error) {
+    savedRunDetailSummary.innerHTML =
+      `<div class="summary-card muted">Could not load saved run.</div>`;
+    savedRunDetailJson.textContent = String(error);
+  }
+}
+
+async function loadSavedRunDetail(event) {
+  event.preventDefault();
+
+  const runId = savedRunDetailForm
+    .querySelector('input[name="run_id"]')
+    .value.trim();
+
+  await loadSavedRunDetailById(runId);
+}
+
 async function refreshEnvironmentStatus(event = null) {
   if (event) {
     event.preventDefault();
@@ -744,7 +918,14 @@ async function loadSerializationDefaults() {
 
 async function runRequestResponseExperiment(event) {
   event.preventDefault();
-  const payload = buildRequestResponseExperimentPayload(new FormData(requestResponseExperimentForm));
+
+  const formData = new FormData(requestResponseExperimentForm);
+  const payload = buildRequestResponseExperimentPayload(formData);
+  const persistence = getPersistenceOptions(
+    requestResponseExperimentForm,
+    "request_response_save_result",
+    "request_response_run_label"
+  );
 
   if (!payload.transports.length) {
     requestResponseRunSummary.innerHTML =
@@ -755,11 +936,18 @@ async function runRequestResponseExperiment(event) {
   requestResponseRunSummary.innerHTML = `<div class="summary-card muted">Running experiment...</div>`;
   requestResponseRunJson.textContent = "Running experiment...";
 
-  const response = await fetch("/experiments/request-response/run", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
+  const response = await fetch(
+    buildExperimentRunUrl(
+      "/experiments/request-response/run",
+      persistence.saveResult,
+      persistence.runLabel
+    ),
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }
+  );
 
   const data = await response.json();
 
@@ -780,12 +968,21 @@ async function runRequestResponseExperiment(event) {
     "avg_ms"
   );
 
-  renderCardGroup(requestResponseRunSummary, [
+  const requestResponseCards = [
     { label: "Iterations", value: String(data.iterations) },
     { label: "Transports run", value: String(data.transports.length) },
     { label: "Best set_value", value: `${setBest.transport} (${setBest.avg_ms.toFixed(3)} ms)` },
     { label: "Best get_value", value: `${getBest.transport} (${getBest.avg_ms.toFixed(3)} ms)` },
-  ]);
+  ];
+
+  if (data.saved_result) {
+    requestResponseCards.push({
+      label: "Saved run",
+      value: data.saved_result.run_id,
+    });
+  }
+
+  renderCardGroup(requestResponseRunSummary, requestResponseCards);
 
   const experimentRows = data.measurements.flatMap((measurement) => [
     {
@@ -820,11 +1017,23 @@ async function runRequestResponseExperiment(event) {
   );
 
   requestResponseRunJson.textContent = JSON.stringify(data, null, 2);
+
+  if (data.saved_result) {
+    await loadRecentRuns();
+    await loadSavedRunDetailById(data.saved_result.run_id);
+  }
 }
 
 async function runRealtimeExperiment(event) {
   event.preventDefault();
-  const payload = buildRealtimeExperimentPayload(new FormData(realtimeExperimentForm));
+
+  const formData = new FormData(realtimeExperimentForm);
+  const payload = buildRealtimeExperimentPayload(formData);
+  const persistence = getPersistenceOptions(
+    realtimeExperimentForm,
+    "realtime_save_result",
+    "realtime_run_label"
+  );
 
   if (!payload.transports.length) {
     realtimeRunSummary.innerHTML =
@@ -835,11 +1044,18 @@ async function runRealtimeExperiment(event) {
   realtimeRunSummary.innerHTML = `<div class="summary-card muted">Running experiment...</div>`;
   realtimeRunJson.textContent = "Running experiment...";
 
-  const response = await fetch("/experiments/realtime/run", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
+  const response = await fetch(
+    buildExperimentRunUrl(
+      "/experiments/realtime/run",
+      persistence.saveResult,
+      persistence.runLabel
+    ),
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }
+  );
 
   const data = await response.json();
 
@@ -860,12 +1076,21 @@ async function runRealtimeExperiment(event) {
     "summary.avg_ms"
   );
 
-  renderCardGroup(realtimeRunSummary, [
+  const realtimeCards = [
     { label: "Iterations", value: String(data.iterations) },
     { label: "Transports run", value: String(data.transports.length) },
     { label: "Best non_empty_fetch", value: `${bestNonEmpty.transport} (${bestNonEmpty.summary.avg_ms.toFixed(3)} ms)` },
     { label: "Best empty_fetch", value: `${bestEmpty.transport} (${bestEmpty.summary.avg_ms.toFixed(3)} ms)` },
-  ]);
+  ];
+
+  if (data.saved_result) {
+    realtimeCards.push({
+      label: "Saved run",
+      value: data.saved_result.run_id,
+    });
+  }
+
+  renderCardGroup(realtimeRunSummary, realtimeCards);
 
   renderTable(
     realtimeRunTable,
@@ -882,11 +1107,23 @@ async function runRealtimeExperiment(event) {
   );
 
   realtimeRunJson.textContent = JSON.stringify(data, null, 2);
+
+  if (data.saved_result) {
+    await loadRecentRuns();
+    await loadSavedRunDetailById(data.saved_result.run_id);
+  }
 }
 
 async function runValidationExperiment(event) {
   event.preventDefault();
-  const payload = buildValidationExperimentPayload(new FormData(validationExperimentForm));
+
+  const formData = new FormData(validationExperimentForm);
+  const payload = buildValidationExperimentPayload(formData);
+  const persistence = getPersistenceOptions(
+    validationExperimentForm,
+    "validation_save_result",
+    "validation_run_label"
+  );
 
   if (!payload.scenarios.length) {
     validationRunSummary.innerHTML =
@@ -897,11 +1134,18 @@ async function runValidationExperiment(event) {
   validationRunSummary.innerHTML = `<div class="summary-card muted">Running experiment...</div>`;
   validationRunJson.textContent = "Running experiment...";
 
-  const response = await fetch("/experiments/validation/run", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
+  const response = await fetch(
+    buildExperimentRunUrl(
+      "/experiments/validation/run",
+      persistence.saveResult,
+      persistence.runLabel
+    ),
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }
+  );
 
   const data = await response.json();
 
@@ -915,12 +1159,21 @@ async function runValidationExperiment(event) {
   const fastest = bestRowBy(data.measurements, "summary.avg_us");
   const slowest = worstRowBy(data.measurements, "summary.avg_us");
 
-  renderCardGroup(validationRunSummary, [
+  const validationCards = [
     { label: "Iterations", value: String(data.iterations) },
     { label: "Scenarios run", value: String(data.scenarios.length) },
     { label: "Fastest scenario", value: `${fastest.scenario} (${fastest.summary.avg_us.toFixed(3)} us)` },
     { label: "Slowest scenario", value: `${slowest.scenario} (${slowest.summary.avg_us.toFixed(3)} us)` },
-  ]);
+  ];
+
+  if (data.saved_result) {
+    validationCards.push({
+      label: "Saved run",
+      value: data.saved_result.run_id,
+    });
+  }
+
+  renderCardGroup(validationRunSummary, validationCards);
 
   renderTable(
     validationRunTable,
@@ -936,11 +1189,23 @@ async function runValidationExperiment(event) {
   );
 
   validationRunJson.textContent = JSON.stringify(data, null, 2);
+
+  if (data.saved_result) {
+    await loadRecentRuns();
+    await loadSavedRunDetailById(data.saved_result.run_id);
+  }
 }
 
 async function runSerializationExperiment(event) {
   event.preventDefault();
-  const payload = buildSerializationExperimentPayload(new FormData(serializationExperimentForm));
+
+  const formData = new FormData(serializationExperimentForm);
+  const payload = buildSerializationExperimentPayload(formData);
+  const persistence = getPersistenceOptions(
+    serializationExperimentForm,
+    "serialization_save_result",
+    "serialization_run_label"
+  );
 
   if (!payload.transports.length) {
     serializationRunSummary.innerHTML =
@@ -957,11 +1222,18 @@ async function runSerializationExperiment(event) {
   serializationRunSummary.innerHTML = `<div class="summary-card muted">Running experiment...</div>`;
   serializationRunJson.textContent = "Running experiment...";
 
-  const response = await fetch("/experiments/serialization/run", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
+  const response = await fetch(
+    buildExperimentRunUrl(
+      "/experiments/serialization/run",
+      persistence.saveResult,
+      persistence.runLabel
+    ),
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }
+  );
 
   const data = await response.json();
 
@@ -977,14 +1249,23 @@ async function runSerializationExperiment(event) {
   const fastestSerialize = bestRowBy(data.measurements, "request_serialize_summary.avg_us");
   const fastestDeserialize = bestRowBy(data.measurements, "response_deserialize_summary.avg_us");
 
-  renderCardGroup(serializationRunSummary, [
+  const serializationCards = [
     { label: "Iterations", value: String(data.iterations) },
     { label: "Measurements", value: String(data.measurements.length) },
     { label: "Smallest request", value: `${smallestRequest.transport}/${smallestRequest.operation} (${smallestRequest.request_size_bytes} B)` },
     { label: "Fastest request serialize", value: `${fastestSerialize.transport}/${fastestSerialize.operation} (${fastestSerialize.request_serialize_summary.avg_us.toFixed(3)} us)` },
     { label: "Smallest response", value: `${smallestResponse.transport}/${smallestResponse.operation} (${smallestResponse.response_size_bytes} B)` },
     { label: "Fastest response deserialize", value: `${fastestDeserialize.transport}/${fastestDeserialize.operation} (${fastestDeserialize.response_deserialize_summary.avg_us.toFixed(3)} us)` },
-  ]);
+  ];
+
+  if (data.saved_result) {
+    serializationCards.push({
+      label: "Saved run",
+      value: data.saved_result.run_id,
+    });
+  }
+
+  renderCardGroup(serializationRunSummary, serializationCards);
 
   renderTable(
     serializationRunTable,
@@ -1003,6 +1284,11 @@ async function runSerializationExperiment(event) {
   );
 
   serializationRunJson.textContent = JSON.stringify(data, null, 2);
+
+  if (data.saved_result) {
+    await loadRecentRuns();
+    await loadSavedRunDetailById(data.saved_result.run_id);
+  }
 }
 
 async function loadReportsDashboard() {
@@ -1144,6 +1430,9 @@ loadRequestResponseDefaultsButton.addEventListener("click", loadRequestResponseD
 
 environmentStatusForm.addEventListener("submit", refreshEnvironmentStatus);
 loadEnvironmentDefaultsButton.addEventListener("click", loadEnvironmentDefaults);
+
+recentRunsForm.addEventListener("submit", loadRecentRuns);
+savedRunDetailForm.addEventListener("submit", loadSavedRunDetail);
 
 realtimeExperimentForm.addEventListener("submit", runRealtimeExperiment);
 loadRealtimeDefaultsButton.addEventListener("click", loadRealtimeDefaults);

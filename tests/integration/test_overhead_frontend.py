@@ -31,6 +31,15 @@ def test_frontend_root_returns_html():
     assert "Environment summary" in response.text
     assert "Environment services" in response.text
     assert "Refresh status" in response.text
+    assert "Save result" in response.text
+    assert "Run label" in response.text
+    assert "Recent saved runs" in response.text
+    assert "Recent runs summary" in response.text
+    assert "Recent runs table" in response.text
+    assert "Saved run details" in response.text
+    assert "Saved run detail summary" in response.text
+    assert "Saved run detail JSON" in response.text
+    assert "Load selected run" in response.text
 
 
 def test_frontend_static_css_is_served():
