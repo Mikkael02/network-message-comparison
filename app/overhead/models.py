@@ -149,6 +149,8 @@ class SequencePatternInput(BaseModel):
     message_frequency_hz: float = Field(default=1.0, gt=0)
     aggregation_mode: AggregationMode = AggregationMode.PER_MESSAGE
     batch_size: int = Field(default=1, ge=1)
+    nagle_enabled: bool = False
+    nagle_max_coalesced_messages: int = Field(default=3, ge=1, le=64)
     mtu_bytes: Optional[int] = Field(default=None, ge=68)
     application_header_overhead_bytes: Optional[int] = Field(default=None, ge=0)
     ethernet_header_size_bytes: Optional[int] = Field(default=None, ge=0)
@@ -185,6 +187,9 @@ class AggregatedTransmissionUnit(BaseModel):
 class SequenceTransmissionAnalysisResult(BaseModel):
     input_summary: SequencePatternInput
     effective_settings: EffectiveTransmissionSettings
+    nagle_enabled: bool
+    effective_aggregation_mode: str
+    aggregated_payload_sizes_bytes: list[int]
     original_message_count: int = Field(..., ge=1)
     aggregated_message_count: int = Field(..., ge=1)
     total_original_payload_bytes: int = Field(..., ge=1)

@@ -387,51 +387,72 @@ def _group_payloads_nagle_like(
     return groups
 
 
+def aggregate_sequence_payloads(
+    payload_sizes_bytes: list[int],
+    aggregation_mode: str,
+    batch_size: int,
+    nagle_enabled: bool,
+    nagle_max_coalesced_messages: int,
+) -> tuple[list[int], str]:
+    if aggregation_mode == "batched":
+        aggregated = []
+        for start in range(0, len(payload_sizes_bytes), batch_size):
+            aggregated.append(sum(payload_sizes_bytes[start:start + batch_size]))
+        return aggregated, "batched"
+
+    if aggregation_mode == "nagle_like":
+        nagle_enabled = True
+
+    if nagle_enabled:
+        aggregated = []
+        for start in range(0, len(payload_sizes_bytes), nagle_max_coalesced_messages):
+            aggregated.append(
+                sum(payload_sizes_bytes[start:start + nagle_max_coalesced_messages])
+            )
+        return aggregated, "nagle_like"
+
+    return list(payload_sizes_bytes), "per_message"
+
+
 def calculate_sequence_overhead(
     input_data: SequencePatternInput,
 ) -> SequenceTransmissionAnalysisResult:
     effective_settings = _resolve_effective_settings_for_sequence(input_data)
 
-    payload_sizes = input_data.payload_sizes_bytes
-    serialized_sizes = [
+    aggregated_payload_sizes_bytes, effective_aggregation_mode = aggregate_sequence_payloads(
+        payload_sizes_bytes=input_data.payload_sizes_bytes,
+        aggregation_mode=input_data.aggregation_mode.value,
+        batch_size=input_data.batch_size,
+        nagle_enabled=input_data.nagle_enabled,
+        nagle_max_coalesced_messages=input_data.nagle_max_coalesced_messages,
+    )
+
+    aggregated_serialized_sizes = [
         _estimate_serialized_size_for_encoding(
             input_data.payload_encoding.value,
             payload_size,
         )
-        for payload_size in payload_sizes
+        for payload_size in aggregated_payload_sizes_bytes
     ]
-
-    if input_data.aggregation_mode == AggregationMode.PER_MESSAGE:
-        grouped = list(
-            zip(
-                [1] * len(payload_sizes),
-                payload_sizes,
-                serialized_sizes,
-            )
-        )
-
-    elif input_data.aggregation_mode == AggregationMode.BATCHED:
-        grouped = _group_payloads_batched(
-            payload_sizes,
-            serialized_sizes,
-            input_data.batch_size,
-        )
-
-    else:
-        grouped = _group_payloads_nagle_like(
-            payload_sizes,
-            serialized_sizes,
-            input_data.batch_size,
-            effective_settings,
-        )
 
     aggregated_units: list[AggregatedTransmissionUnit] = []
     total_transmitted_bytes = 0
     total_frame_count = 0
-    total_original_payload_bytes = sum(payload_sizes)
-    total_serialized_payload_bytes = sum(serialized_sizes)
+    total_original_payload_bytes = sum(input_data.payload_sizes_bytes)
+    total_serialized_payload_bytes = sum(aggregated_serialized_sizes)
 
-    for index, (message_count, payload_sum, serialized_sum) in enumerate(grouped, start=1):
+    remaining_original_payloads = list(input_data.payload_sizes_bytes)
+
+    for index, (payload_sum, serialized_sum) in enumerate(
+        zip(aggregated_payload_sizes_bytes, aggregated_serialized_sizes),
+        start=1,
+    ):
+        current_payload_sum = 0
+        current_message_count = 0
+        while remaining_original_payloads and current_payload_sum < payload_sum:
+            current_payload_sum += remaining_original_payloads.pop(0)
+            current_message_count += 1
+
         metrics = _calculate_transport_metrics(
             payload_size_bytes=payload_sum,
             serialized_payload_size_bytes=serialized_sum,
@@ -442,7 +463,7 @@ def calculate_sequence_overhead(
         aggregated_units.append(
             AggregatedTransmissionUnit(
                 batch_index=index,
-                original_message_count=message_count,
+                original_message_count=current_message_count,
                 original_payload_bytes_sum=payload_sum,
                 aggregated_serialized_payload_size_bytes=serialized_sum,
                 application_protocol_overhead_bytes=metrics["application_protocol_overhead_bytes"],
@@ -458,25 +479,31 @@ def calculate_sequence_overhead(
     overhead_ratio = overhead_bytes / total_transmitted_bytes
     payload_efficiency_ratio = total_original_payload_bytes / total_transmitted_bytes
 
-    sequence_duration_seconds = len(payload_sizes) / input_data.message_frequency_hz
+    sequence_duration_seconds = len(input_data.payload_sizes_bytes) / input_data.message_frequency_hz
     required_bitrate_bps = (total_transmitted_bytes * 8) / sequence_duration_seconds
     required_bitrate_kbps = required_bitrate_bps / 1000
     required_bitrate_mbps = required_bitrate_bps / 1_000_000
 
     notes = _build_settings_notes(effective_settings, input_data)
-    notes[1] = f"Aggregation mode: {input_data.aggregation_mode.value}"
+    notes[1] = f"Aggregation mode: {effective_aggregation_mode}"
 
-    if input_data.aggregation_mode == AggregationMode.BATCHED:
+    if effective_aggregation_mode == "batched":
         notes.append("Messages are grouped into fixed-size batches before transmission.")
 
-    if input_data.aggregation_mode == AggregationMode.NAGLE_LIKE:
-        notes.append("Messages are greedily aggregated until the payload nears single-segment capacity.")
+    if effective_aggregation_mode == "nagle_like":
+        notes.append("Modelowe grupowanie Nagle-like jest aktywne dla tej sekwencji.")
+
+    if not input_data.nagle_enabled and input_data.aggregation_mode == AggregationMode.PER_MESSAGE:
+        notes.append("Każda wiadomość została przesłana osobno bez modelowego grupowania Nagle-like.")
 
     return SequenceTransmissionAnalysisResult(
         input_summary=input_data,
         effective_settings=effective_settings,
-        original_message_count=len(payload_sizes),
-        aggregated_message_count=len(grouped),
+        nagle_enabled=input_data.nagle_enabled,
+        effective_aggregation_mode=effective_aggregation_mode,
+        aggregated_payload_sizes_bytes=aggregated_payload_sizes_bytes,
+        original_message_count=len(input_data.payload_sizes_bytes),
+        aggregated_message_count=len(aggregated_payload_sizes_bytes),
         total_original_payload_bytes=total_original_payload_bytes,
         total_serialized_payload_bytes=total_serialized_payload_bytes,
         total_transmitted_bytes=total_transmitted_bytes,

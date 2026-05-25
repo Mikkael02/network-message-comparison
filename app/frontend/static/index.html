@@ -145,17 +145,47 @@
 <option value="jumbo_frame">jumbo_frame</option>
 </select>
 </label>
+<div class="checkbox-group wide">
+<span class="checkbox-group-title">Profile do porównania</span>
+<label class="checkbox-inline">
+<input checked="" name="compare_profile_standard_ethernet" type="checkbox"/>
+                    standard_ethernet
+                  </label>
+<label class="checkbox-inline">
+<input checked="" name="compare_profile_constrained_mtu" type="checkbox"/>
+                    constrained_mtu
+                  </label>
+<label class="checkbox-inline">
+<input checked="" name="compare_profile_tcp_options_heavy" type="checkbox"/>
+                    tcp_options_heavy
+                  </label>
+<label class="checkbox-inline">
+<input checked="" name="compare_profile_jumbo_frame" type="checkbox"/>
+                    jumbo_frame
+                  </label>
+</div>
 <label>
                   Aggregation mode
                   <select name="aggregation_mode">
 <option value="per_message">per_message</option>
 <option value="batched">batched</option>
-<option value="nagle_like">nagle_like</option>
+<option value="nagle_like">nagle_like (legacy)</option>
 </select>
 </label>
 <label>
                   Batch size
                   <input min="1" name="batch_size" type="number" value="3"/>
+</label>
+<div class="checkbox-group wide">
+<span class="checkbox-group-title">Algorytm Nagle’a</span>
+<label class="checkbox-inline">
+<input name="nagle_enabled" type="checkbox"/>
+                    Włącz modelowe grupowanie Nagle-like
+                  </label>
+</div>
+<label>
+                  Maks. liczba wiadomości w grupie Nagle
+                  <input max="64" min="1" name="nagle_max_coalesced_messages" type="number" value="3"/>
 </label>
 <label>
                   Częstotliwość wiadomości [Hz]
@@ -192,9 +222,17 @@
                   Nagłówek TCP [bajty]
                   <input min="0" name="tcp_header_size_bytes" placeholder="auto" type="number"/>
 </label>
+<div class="form-actions wide">
 <button class="primary-button" type="submit">
                   Analizuj sekwencję
                 </button>
+<button class="primary-button secondary-button" id="compare-nagle-button" type="button">
+                  Porównaj Nagle off/on
+                </button>
+<button class="primary-button secondary-button" id="compare-profiles-button" type="button">
+                  Porównaj profile transmisji
+                </button>
+</div>
 </form>
 </div>
 </section>
@@ -213,6 +251,54 @@
 <section class="panel">
 <h3>Wynik szczegółowy</h3>
 <pre class="result-box" id="result-json">Brak wyniku.</pre>
+</section>
+<section class="panel">
+<h3>Wizualizacja transmisji</h3>
+<div id="transmission-visualization">
+<div class="summary-card muted">Uruchom analizę, aby zobaczyć wizualizację.</div>
+</div>
+</section>
+<section class="panel">
+<h3>Budowa ramki i warstw</h3>
+<div id="frame-layer-visualization">
+<div class="summary-card muted">Uruchom analizę, aby zobaczyć budowę ramki.</div>
+</div>
+</section>
+<section class="panel hidden" id="nagle-comparison-summary-panel">
+<h3>Porównanie Nagle off/on</h3>
+<div class="summary-grid" id="nagle-comparison-summary">
+<div class="summary-card muted">Uruchom porównanie, aby zobaczyć wyniki.</div>
+</div>
+</section>
+<section class="panel hidden" id="nagle-comparison-table-panel">
+<h3>Tabela porównawcza Nagle</h3>
+<div id="nagle-comparison-table">
+<div class="summary-card muted">Uruchom porównanie, aby zobaczyć wyniki.</div>
+</div>
+</section>
+<section class="panel hidden" id="nagle-comparison-chart-panel">
+<h3>Wizualizacja porównania Nagle</h3>
+<div id="nagle-comparison-chart">
+<div class="summary-card muted">Uruchom porównanie, aby zobaczyć wykres.</div>
+</div>
+</section>
+<section class="panel hidden" id="profile-comparison-summary-panel">
+<h3>Porównanie profili transmisji</h3>
+<div class="summary-grid" id="profile-comparison-summary">
+<div class="summary-card muted">Uruchom porównanie profili, aby zobaczyć wyniki.</div>
+</div>
+</section>
+<section class="panel hidden" id="profile-comparison-table-panel">
+<h3>Tabela porównawcza profili</h3>
+<div id="profile-comparison-table">
+<div class="summary-card muted">Uruchom porównanie profili, aby zobaczyć wyniki.</div>
+</div>
+</section>
+<section class="panel hidden" id="profile-comparison-chart-panel">
+<h3>Wizualizacja porównania profili</h3>
+<div id="profile-comparison-chart">
+<div class="summary-card muted">Uruchom porównanie profili, aby zobaczyć wykres.</div>
+</div>
 </section>
 </section>
 <section class="hidden" id="view-experiments"><section class="panel">

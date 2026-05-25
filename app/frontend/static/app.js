@@ -8,6 +8,8 @@ const singleForm = document.getElementById("single-form");
 const sequenceForm = document.getElementById("sequence-form");
 const summaryCards = document.getElementById("summary-cards");
 const resultJson = document.getElementById("result-json");
+const transmissionVisualization = document.getElementById("transmission-visualization");
+const frameLayerVisualization = document.getElementById("frame-layer-visualization");
 
 const navOverhead = document.getElementById("nav-overhead");
 const navExperiments = document.getElementById("nav-experiments");
@@ -67,6 +69,20 @@ const recentRunsTable = document.getElementById("recent-runs-table");
 const savedRunDetailForm = document.getElementById("saved-run-detail-form");
 const savedRunDetailSummary = document.getElementById("saved-run-detail-summary");
 const savedRunDetailJson = document.getElementById("saved-run-detail-json");
+const compareNagleButton = document.getElementById("compare-nagle-button");
+const nagleComparisonSummary = document.getElementById("nagle-comparison-summary");
+const nagleComparisonTable = document.getElementById("nagle-comparison-table");
+const nagleComparisonChart = document.getElementById("nagle-comparison-chart");
+const nagleComparisonSummaryPanel = document.getElementById("nagle-comparison-summary-panel");
+const nagleComparisonTablePanel = document.getElementById("nagle-comparison-table-panel");
+const nagleComparisonChartPanel = document.getElementById("nagle-comparison-chart-panel");
+const compareProfilesButton = document.getElementById("compare-profiles-button");
+const profileComparisonSummary = document.getElementById("profile-comparison-summary");
+const profileComparisonTable = document.getElementById("profile-comparison-table");
+const profileComparisonChart = document.getElementById("profile-comparison-chart");
+const profileComparisonSummaryPanel = document.getElementById("profile-comparison-summary-panel");
+const profileComparisonTablePanel = document.getElementById("profile-comparison-table-panel");
+const profileComparisonChartPanel = document.getElementById("profile-comparison-chart-panel");
 
 function setMode(mode) {
   const singleActive = mode === "single";
@@ -74,6 +90,20 @@ function setMode(mode) {
   sequenceTab.classList.toggle("active", !singleActive);
   singleFormSection.classList.toggle("hidden", !singleActive);
   sequenceFormSection.classList.toggle("hidden", singleActive);
+
+  const hideSequenceComparisons = singleActive;
+  [
+    nagleComparisonSummaryPanel,
+    nagleComparisonTablePanel,
+    nagleComparisonChartPanel,
+    profileComparisonSummaryPanel,
+    profileComparisonTablePanel,
+    profileComparisonChartPanel,
+  ].forEach((element) => {
+    if (element) {
+      element.classList.toggle("hidden", hideSequenceComparisons);
+    }
+  });
 }
 
 function setMainView(view) {
@@ -216,6 +246,294 @@ function renderTable(container, columns, rows) {
   `;
 }
 
+function renderSimpleComparisonBars(container, rows) {
+  const metrics = [
+    {
+      key: "total_transmitted_bytes",
+      label: "Przesłane bajty",
+      formatter: (value) => `${value} B`,
+    },
+    {
+      key: "total_frame_count",
+      label: "Liczba ramek",
+      formatter: (value) => String(value),
+    },
+    {
+      key: "aggregated_message_count",
+      label: "Zagregowane wiadomości",
+      formatter: (value) => String(value),
+    },
+    {
+      key: "payload_efficiency_ratio",
+      label: "Efektywność payloadu",
+      formatter: (value) => Number(value).toFixed(4),
+    },
+  ];
+
+  const chartSections = metrics.map((metric) => {
+    const maxValue = Math.max(...rows.map((row) => row[metric.key])) || 1;
+
+    const bars = rows
+      .map((row) => {
+        const percent = (row[metric.key] / maxValue) * 100;
+        return `
+          <div style="margin-bottom: 10px;">
+            <div style="display:flex; justify-content:space-between; gap:12px; font-size: 14px;">
+              <span>${row.variant_label}</span>
+              <span>${metric.formatter(row[metric.key])}</span>
+            </div>
+            <div style="width:100%; background:#e5e7eb; border-radius:10px; overflow:hidden; height:14px; margin-top:4px;">
+              <div style="width:${percent}%; height:14px; background:#9ca3af;"></div>
+            </div>
+          </div>
+        `;
+      })
+      .join("");
+
+    return `
+      <div class="summary-card" style="min-width: 260px;">
+        <span class="label">${metric.label}</span>
+        <div style="margin-top:10px;">
+          ${bars}
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = `
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px;">
+      ${chartSections.join("")}
+    </div>
+  `;
+}
+
+
+function renderLayerStack(title, layers) {
+  const total = layers.reduce((sum, layer) => sum + layer.value, 0) || 1;
+
+  const segments = layers
+    .map((layer) => {
+      const percent = Math.max(6, (layer.value / total) * 100);
+      return `
+        <div style="margin-bottom:12px;">
+          <div style="display:flex; justify-content:space-between; gap:12px; font-size:14px;">
+            <span>${layer.label}</span>
+            <span>${layer.value} B (${((layer.value / total) * 100).toFixed(1)}%)</span>
+          </div>
+          <div style="width:100%; background:#0f172a; border-radius:10px; overflow:hidden; height:18px; margin-top:4px;">
+            <div style="width:${percent}%; height:18px; background:${layer.color};"></div>
+          </div>
+        </div>
+      `;
+    })
+    .join("");
+
+  return `
+    <div class="summary-card">
+      <span class="label">${title}</span>
+      <div style="margin-top:10px;">
+        ${segments}
+      </div>
+      <div style="margin-top:10px; font-size:14px;">
+        <strong>Łącznie:</strong> ${total} B
+      </div>
+    </div>
+  `;
+}
+
+
+function renderLabeledBlocks(title, values, unit = "B") {
+  if (!values || !values.length) {
+    return `
+      <div class="summary-card">
+        <span class="label">${title}</span>
+        <div class="muted">Brak danych</div>
+      </div>
+    `;
+  }
+
+  const maxValue = Math.max(...values, 1);
+
+  const blocks = values
+    .map((value, index) => {
+      const percent = Math.max(8, (value / maxValue) * 100);
+      return `
+        <div style="margin-bottom:10px;">
+          <div style="display:flex; justify-content:space-between; gap:12px; font-size:14px;">
+            <span>${title} ${index + 1}</span>
+            <span>${value} ${unit}</span>
+          </div>
+          <div style="width:100%; background:#1e293b; border-radius:10px; overflow:hidden; height:16px; margin-top:4px;">
+            <div style="width:${percent}%; height:16px; background:#38bdf8;"></div>
+          </div>
+        </div>
+      `;
+    })
+    .join("");
+
+  return `
+    <div class="summary-card">
+      <span class="label">${title}</span>
+      <div style="margin-top:10px;">
+        ${blocks}
+      </div>
+    </div>
+  `;
+}
+
+function renderSingleTransmissionVisualization(data) {
+  const serializedPayload =
+    data.serialized_payload_size_bytes ??
+    data.layer_breakdown?.serialized_payload_size_bytes ??
+    data.input_summary?.payload_size_bytes ??
+    "-";
+  const bytesPerFrame =
+    data.frame_analysis?.bytes_per_frame ||
+    data.frame_analysis?.frame_sizes_bytes ||
+    [];
+  const mtu = data.effective_settings?.mtu_bytes ?? "-";
+  const payloadInput =
+    data.input_summary?.payload_size_bytes ??
+    data.payload_size_bytes ??
+    "-";
+
+  transmissionVisualization.innerHTML = `
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:16px;">
+      <div class="summary-card">
+        <span class="label">Poziom aplikacji</span>
+        <div style="margin-top:10px;">
+          <div><strong>Payload wejściowy:</strong> ${payloadInput} B</div>
+          <div><strong>Payload po serializacji:</strong> ${serializedPayload} B</div>
+          <div><strong>Narzut aplikacyjny:</strong> ${data.effective_settings?.application_header_overhead_bytes ?? "-"} B</div>
+        </div>
+      </div>
+
+      <div class="summary-card">
+        <span class="label">Segmentacja</span>
+        <div style="margin-top:10px;">
+          <div><strong>MTU:</strong> ${mtu} B</div>
+          <div><strong>Liczba segmentów:</strong> ${data.frame_analysis?.segment_count ?? "-"}</div>
+          <div><strong>Liczba ramek:</strong> ${data.frame_analysis?.frame_count ?? "-"}</div>
+          <div><strong>Fragmentacja:</strong> ${data.frame_analysis?.fragmentation_occurred ? "tak" : "nie"}</div>
+        </div>
+      </div>
+
+      ${renderLabeledBlocks("Ramka", bytesPerFrame)}
+    </div>
+  `;
+}
+
+function renderSequenceTransmissionVisualization(data) {
+  const payloads = data.input_summary?.payload_sizes_bytes || [];
+  const aggregated = data.aggregated_payload_sizes_bytes || [];
+  const mtu = data.effective_settings?.mtu_bytes ?? "-";
+
+  transmissionVisualization.innerHTML = `
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:16px;">
+      ${renderLabeledBlocks("Payload wejściowy", payloads)}
+      ${renderLabeledBlocks("Grupa po agregacji", aggregated)}
+
+      <div class="summary-card">
+        <span class="label">Podsumowanie transmisji</span>
+        <div style="margin-top:10px;">
+          <div><strong>Tryb agregacji:</strong> ${data.effective_aggregation_mode}</div>
+          <div><strong>Nagle:</strong> ${data.nagle_enabled ? "włączony" : "wyłączony"}</div>
+          <div><strong>MTU:</strong> ${mtu} B</div>
+          <div><strong>Liczba ramek:</strong> ${data.total_frame_count}</div>
+          <div><strong>Łącznie przesłane:</strong> ${data.total_transmitted_bytes} B</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+
+function renderSingleFrameLayerVisualization(data) {
+  const settings = data.effective_settings || {};
+  const payloadBytes =
+    data.serialized_payload_size_bytes ??
+    data.layer_breakdown?.serialized_payload_size_bytes ??
+    data.input_summary?.payload_size_bytes ??
+    0;
+  const appHeaderBytes = settings.application_header_overhead_bytes ?? 0;
+  const tcpBytes = settings.tcp_header_size_bytes ?? 0;
+  const ipv4Bytes = settings.ipv4_header_size_bytes ?? 0;
+  const ethernetHeaderBytes = settings.ethernet_header_size_bytes ?? 0;
+  const ethernetTrailerBytes = settings.ethernet_trailer_size_bytes ?? 0;
+
+  frameLayerVisualization.innerHTML = `
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:16px;">
+      ${renderLayerStack("Budowa wiadomości i ramki", [
+        { label: "Payload", value: payloadBytes, color: "#38bdf8" },
+        { label: "Nagłówek aplikacyjny", value: appHeaderBytes, color: "#818cf8" },
+        { label: "TCP", value: tcpBytes, color: "#22c55e" },
+        { label: "IPv4", value: ipv4Bytes, color: "#f59e0b" },
+        { label: "Ethernet header", value: ethernetHeaderBytes, color: "#ef4444" },
+        { label: "Ethernet trailer", value: ethernetTrailerBytes, color: "#ec4899" },
+      ])}
+
+      <div class="summary-card">
+        <span class="label">Interpretacja warstw</span>
+        <div style="margin-top:10px; font-size:14px; line-height:1.6;">
+          <div><strong>Payload po serializacji:</strong> ${payloadBytes} B</div>
+          <div><strong>Warstwa aplikacyjna:</strong> ${appHeaderBytes} B</div>
+          <div><strong>Warstwa transportowa TCP:</strong> ${tcpBytes} B</div>
+          <div><strong>Warstwa sieciowa IPv4:</strong> ${ipv4Bytes} B</div>
+          <div><strong>Warstwa łącza Ethernet:</strong> ${ethernetHeaderBytes + ethernetTrailerBytes} B</div>
+          <div><strong>Łączny narzut nie-payload:</strong> ${
+            appHeaderBytes + tcpBytes + ipv4Bytes + ethernetHeaderBytes + ethernetTrailerBytes
+          } B</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderSequenceFrameLayerVisualization(data) {
+  const settings = data.effective_settings || {};
+  const representativePayload =
+    (data.aggregated_payload_sizes_bytes && data.aggregated_payload_sizes_bytes[0]) || 0;
+
+  const appHeaderBytes = settings.application_header_overhead_bytes ?? 0;
+  const tcpBytes = settings.tcp_header_size_bytes ?? 0;
+  const ipv4Bytes = settings.ipv4_header_size_bytes ?? 0;
+  const ethernetHeaderBytes = settings.ethernet_header_size_bytes ?? 0;
+  const ethernetTrailerBytes = settings.ethernet_trailer_size_bytes ?? 0;
+
+  const perGroupTotal =
+    representativePayload +
+    appHeaderBytes +
+    tcpBytes +
+    ipv4Bytes +
+    ethernetHeaderBytes +
+    ethernetTrailerBytes;
+
+  frameLayerVisualization.innerHTML = `
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:16px;">
+      ${renderLayerStack("Reprezentatywna grupa po agregacji", [
+        { label: "Payload / grupa", value: representativePayload, color: "#38bdf8" },
+        { label: "Nagłówek aplikacyjny", value: appHeaderBytes, color: "#818cf8" },
+        { label: "TCP", value: tcpBytes, color: "#22c55e" },
+        { label: "IPv4", value: ipv4Bytes, color: "#f59e0b" },
+        { label: "Ethernet header", value: ethernetHeaderBytes, color: "#ef4444" },
+        { label: "Ethernet trailer", value: ethernetTrailerBytes, color: "#ec4899" },
+      ])}
+
+      <div class="summary-card">
+        <span class="label">Podsumowanie sekwencji</span>
+        <div style="margin-top:10px; font-size:14px; line-height:1.6;">
+          <div><strong>Tryb agregacji:</strong> ${data.effective_aggregation_mode}</div>
+          <div><strong>Nagle:</strong> ${data.nagle_enabled ? "włączony" : "wyłączony"}</div>
+          <div><strong>Liczba grup:</strong> ${data.aggregated_message_count}</div>
+          <div><strong>Przykładowa grupa:</strong> ${representativePayload} B</div>
+          <div><strong>Szacowany rozmiar grupy z narzutem:</strong> ${perGroupTotal} B</div>
+          <div><strong>Łącznie przesłane:</strong> ${data.total_transmitted_bytes} B</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function getNestedValue(obj, path) {
   return path.split(".").reduce((acc, part) => acc[part], obj);
 }
@@ -343,6 +661,8 @@ function buildSequencePayload(formData) {
     aggregation_mode: formData.get("aggregation_mode"),
     batch_size: Number(formData.get("batch_size")),
     message_frequency_hz: Number(formData.get("message_frequency_hz")),
+    nagle_enabled: formData.get("nagle_enabled") === "on",
+    nagle_max_coalesced_messages: Number(formData.get("nagle_max_coalesced_messages")),
   };
 
   appendOptionalNumber(payload, "mtu_bytes", formData.get("mtu_bytes"));
@@ -378,6 +698,25 @@ function buildSequencePayload(formData) {
   );
 
   return payload;
+}
+
+function getSelectedComparisonProfiles() {
+  const profiles = [];
+
+  if (sequenceForm.querySelector('input[name="compare_profile_standard_ethernet"]').checked) {
+    profiles.push("standard_ethernet");
+  }
+  if (sequenceForm.querySelector('input[name="compare_profile_constrained_mtu"]').checked) {
+    profiles.push("constrained_mtu");
+  }
+  if (sequenceForm.querySelector('input[name="compare_profile_tcp_options_heavy"]').checked) {
+    profiles.push("tcp_options_heavy");
+  }
+  if (sequenceForm.querySelector('input[name="compare_profile_jumbo_frame"]').checked) {
+    profiles.push("jumbo_frame");
+  }
+
+  return profiles;
 }
 
 function parseOptionalNumber(value) {
@@ -536,6 +875,10 @@ async function analyzeSingle(event) {
     renderSummary([{ label: "Błąd", value: "Żądanie nie powiodło się" }]);
     effectiveSettingsBox.innerHTML =
       `<div class="summary-card muted">Nie udało się wyznaczyć efektywnych ustawień.</div>`;
+    transmissionVisualization.innerHTML =
+      `<div class="summary-card muted">Nie udało się wygenerować wizualizacji.</div>`;
+    frameLayerVisualization.innerHTML =
+      `<div class="summary-card muted">Nie udało się wygenerować budowy ramki.</div>`;
     renderResult(data);
     return;
   }
@@ -549,6 +892,8 @@ async function analyzeSingle(event) {
 
   renderEffectiveSettings(data);
   renderResult(data);
+  renderSingleTransmissionVisualization(data);
+  renderSingleFrameLayerVisualization(data);
 }
 
 async function analyzeSequence(event) {
@@ -567,6 +912,10 @@ async function analyzeSequence(event) {
     renderSummary([{ label: "Błąd", value: "Żądanie nie powiodło się" }]);
     effectiveSettingsBox.innerHTML =
       `<div class="summary-card muted">Nie udało się wyznaczyć efektywnych ustawień.</div>`;
+    transmissionVisualization.innerHTML =
+      `<div class="summary-card muted">Nie udało się wygenerować wizualizacji.</div>`;
+    frameLayerVisualization.innerHTML =
+      `<div class="summary-card muted">Nie udało się wygenerować budowy ramki.</div>`;
     renderResult(data);
     return;
   }
@@ -576,10 +925,318 @@ async function analyzeSequence(event) {
     { label: "Łączna liczba przesłanych bajtów", value: String(data.total_transmitted_bytes) },
     { label: "Łączna liczba ramek", value: String(data.total_frame_count) },
     { label: "Efektywność payloadu", value: data.payload_efficiency_ratio.toFixed(4) },
+    { label: "Nagle", value: data.nagle_enabled ? "włączony" : "wyłączony" },
+    { label: "Efektywny tryb agregacji", value: data.effective_aggregation_mode },
   ]);
 
   renderEffectiveSettings(data);
   renderResult(data);
+  renderSequenceTransmissionVisualization(data);
+  renderSequenceFrameLayerVisualization(data);
+}
+
+async function compareNagleVariants() {
+  nagleComparisonSummaryPanel.classList.remove("hidden");
+  nagleComparisonTablePanel.classList.remove("hidden");
+  nagleComparisonChartPanel.classList.remove("hidden");
+
+  nagleComparisonSummary.innerHTML =
+    `<div class="summary-card muted">Trwa porównanie wariantów Nagle...</div>`;
+  nagleComparisonTable.innerHTML = "";
+  nagleComparisonChart.innerHTML = "";
+
+  const basePayload = buildSequencePayload(new FormData(sequenceForm));
+
+  const nagleOffPayload = {
+    ...basePayload,
+    aggregation_mode:
+      basePayload.aggregation_mode === "nagle_like"
+        ? "per_message"
+        : basePayload.aggregation_mode,
+    nagle_enabled: false,
+  };
+
+  const nagleOnPayload = {
+    ...basePayload,
+    aggregation_mode:
+      basePayload.aggregation_mode === "nagle_like"
+        ? "per_message"
+        : basePayload.aggregation_mode,
+    nagle_enabled: true,
+  };
+
+  try {
+    const [offResponse, onResponse] = await Promise.all([
+      fetch("/analyze/sequence", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(nagleOffPayload),
+      }),
+      fetch("/analyze/sequence", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(nagleOnPayload),
+      }),
+    ]);
+
+    const offData = await offResponse.json();
+    const onData = await onResponse.json();
+
+    if (!offResponse.ok || !onResponse.ok) {
+      nagleComparisonSummary.innerHTML =
+        `<div class="summary-card muted">Porównanie Nagle nie powiodło się.</div>`;
+      nagleComparisonTable.innerHTML = `
+        <div class="summary-card muted">${JSON.stringify(
+          { nagle_off: offData, nagle_on: onData },
+          null,
+          2
+        )}</div>
+      `;
+      nagleComparisonChart.innerHTML =
+        `<div class="summary-card muted">Brak wykresu.</div>`;
+      return;
+    }
+
+    const comparisonRows = [
+      {
+        variant_label: "Nagle off",
+        nagle_enabled: offData.nagle_enabled,
+        effective_aggregation_mode: offData.effective_aggregation_mode,
+        aggregated_message_count: offData.aggregated_message_count,
+        total_transmitted_bytes: offData.total_transmitted_bytes,
+        total_frame_count: offData.total_frame_count,
+        payload_efficiency_ratio: offData.payload_efficiency_ratio,
+        aggregated_payload_sizes_bytes: offData.aggregated_payload_sizes_bytes.join(", "),
+      },
+      {
+        variant_label: "Nagle on",
+        nagle_enabled: onData.nagle_enabled,
+        effective_aggregation_mode: onData.effective_aggregation_mode,
+        aggregated_message_count: onData.aggregated_message_count,
+        total_transmitted_bytes: onData.total_transmitted_bytes,
+        total_frame_count: onData.total_frame_count,
+        payload_efficiency_ratio: onData.payload_efficiency_ratio,
+        aggregated_payload_sizes_bytes: onData.aggregated_payload_sizes_bytes.join(", "),
+      },
+    ];
+
+    const bytesDelta = onData.total_transmitted_bytes - offData.total_transmitted_bytes;
+    const framesDelta = onData.total_frame_count - offData.total_frame_count;
+    const efficiencyDelta =
+      onData.payload_efficiency_ratio - offData.payload_efficiency_ratio;
+
+    renderCardGroup(nagleComparisonSummary, [
+      {
+        label: "Różnica bajtów (on - off)",
+        value: String(bytesDelta),
+      },
+      {
+        label: "Różnica ramek (on - off)",
+        value: String(framesDelta),
+      },
+      {
+        label: "Różnica efektywności",
+        value: efficiencyDelta.toFixed(4),
+      },
+      {
+        label: "Lepszy wariant wg bajtów",
+        value:
+          onData.total_transmitted_bytes < offData.total_transmitted_bytes
+            ? "Nagle on"
+            : onData.total_transmitted_bytes > offData.total_transmitted_bytes
+              ? "Nagle off"
+              : "remis",
+      },
+    ]);
+
+    renderTable(
+      nagleComparisonTable,
+      [
+        { key: "variant_label", label: "Wariant" },
+        {
+          key: "nagle_enabled",
+          label: "Nagle",
+          render: (row) => (row.nagle_enabled ? "włączony" : "wyłączony"),
+        },
+        {
+          key: "effective_aggregation_mode",
+          label: "Efektywny tryb",
+        },
+        {
+          key: "aggregated_message_count",
+          label: "Zagregowane wiadomości",
+        },
+        {
+          key: "total_transmitted_bytes",
+          label: "Przesłane bajty",
+        },
+        {
+          key: "total_frame_count",
+          label: "Ramki",
+        },
+        {
+          key: "payload_efficiency_ratio",
+          label: "Efektywność",
+          render: (row) => Number(row.payload_efficiency_ratio).toFixed(4),
+        },
+        {
+          key: "aggregated_payload_sizes_bytes",
+          label: "Grupy payloadów",
+        },
+      ],
+      comparisonRows
+    );
+
+    renderSimpleComparisonBars(nagleComparisonChart, comparisonRows);
+  } catch (error) {
+    nagleComparisonSummary.innerHTML =
+      `<div class="summary-card muted">Porównanie Nagle nie powiodło się.</div>`;
+    nagleComparisonTable.innerHTML =
+      `<div class="summary-card muted">${error}</div>`;
+    nagleComparisonChart.innerHTML =
+      `<div class="summary-card muted">Brak wykresu.</div>`;
+  }
+}
+
+function resetProfileComparisonViews() {
+  profileComparisonSummary.innerHTML =
+    `<div class="summary-card muted">Uruchom porównanie profili, aby zobaczyć wyniki.</div>`;
+  profileComparisonTable.innerHTML =
+    `<div class="summary-card muted">Uruchom porównanie profili, aby zobaczyć wyniki.</div>`;
+  profileComparisonChart.innerHTML =
+    `<div class="summary-card muted">Uruchom porównanie profili, aby zobaczyć wykres.</div>`;
+}
+
+async function compareTransmissionProfiles() {
+  profileComparisonSummaryPanel.classList.remove("hidden");
+  profileComparisonTablePanel.classList.remove("hidden");
+  profileComparisonChartPanel.classList.remove("hidden");
+
+  profileComparisonSummary.innerHTML =
+    `<div class="summary-card muted">Trwa porównanie profili transmisji...</div>`;
+  profileComparisonTable.innerHTML = "";
+  profileComparisonChart.innerHTML = "";
+
+  const selectedProfiles = getSelectedComparisonProfiles();
+
+  if (!selectedProfiles.length) {
+    profileComparisonSummary.innerHTML =
+      `<div class="summary-card muted">Wybierz co najmniej jeden profil transmisji.</div>`;
+    profileComparisonTable.innerHTML =
+      `<div class="summary-card muted">Brak danych.</div>`;
+    profileComparisonChart.innerHTML =
+      `<div class="summary-card muted">Brak wykresu.</div>`;
+    return;
+  }
+
+  const basePayload = buildSequencePayload(new FormData(sequenceForm));
+
+  try {
+    const responses = await Promise.all(
+      selectedProfiles.map((profile) =>
+        fetch("/analyze/sequence", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...basePayload,
+            transmission_profile: profile,
+          }),
+        }).then(async (response) => ({
+          ok: response.ok,
+          profile,
+          data: await response.json(),
+        }))
+      )
+    );
+
+    const failed = responses.filter((item) => !item.ok);
+    if (failed.length) {
+      profileComparisonSummary.innerHTML =
+        `<div class="summary-card muted">Porównanie profili nie powiodło się.</div>`;
+      profileComparisonTable.innerHTML =
+        `<div class="summary-card muted"><pre>${JSON.stringify(failed, null, 2)}</pre></div>`;
+      profileComparisonChart.innerHTML =
+        `<div class="summary-card muted">Brak wykresu.</div>`;
+      return;
+    }
+
+    const rows = responses.map((item) => ({
+      profile: item.profile,
+      total_transmitted_bytes: item.data.total_transmitted_bytes,
+      total_frame_count: item.data.total_frame_count,
+      aggregated_message_count: item.data.aggregated_message_count,
+      payload_efficiency_ratio: item.data.payload_efficiency_ratio,
+      effective_aggregation_mode: item.data.effective_aggregation_mode,
+      aggregated_payload_sizes_bytes: item.data.aggregated_payload_sizes_bytes.join(", "),
+    }));
+
+    const bestByBytes = [...rows].sort(
+      (a, b) => a.total_transmitted_bytes - b.total_transmitted_bytes
+    )[0];
+
+    const worstByBytes = [...rows].sort(
+      (a, b) => b.total_transmitted_bytes - a.total_transmitted_bytes
+    )[0];
+
+    const bestByEfficiency = [...rows].sort(
+      (a, b) => b.payload_efficiency_ratio - a.payload_efficiency_ratio
+    )[0];
+
+    renderCardGroup(profileComparisonSummary, [
+      {
+        label: "Najlepszy profil wg bajtów",
+        value: `${bestByBytes.profile} (${bestByBytes.total_transmitted_bytes} B)`,
+      },
+      {
+        label: "Najgorszy profil wg bajtów",
+        value: `${worstByBytes.profile} (${worstByBytes.total_transmitted_bytes} B)`,
+      },
+      {
+        label: "Najlepsza efektywność",
+        value: `${bestByEfficiency.profile} (${bestByEfficiency.payload_efficiency_ratio.toFixed(4)})`,
+      },
+      {
+        label: "Liczba porównanych profili",
+        value: String(rows.length),
+      },
+    ]);
+
+    renderTable(
+      profileComparisonTable,
+      [
+        { key: "profile", label: "Profil" },
+        { key: "total_transmitted_bytes", label: "Przesłane bajty" },
+        { key: "total_frame_count", label: "Ramki" },
+        { key: "aggregated_message_count", label: "Zagregowane wiadomości" },
+        {
+          key: "payload_efficiency_ratio",
+          label: "Efektywność",
+          render: (row) => Number(row.payload_efficiency_ratio).toFixed(4),
+        },
+        { key: "effective_aggregation_mode", label: "Efektywny tryb" },
+        { key: "aggregated_payload_sizes_bytes", label: "Grupy payloadów" },
+      ],
+      rows
+    );
+
+    renderSimpleComparisonBars(
+      profileComparisonChart,
+      rows.map((row) => ({
+        variant_label: row.profile,
+        total_transmitted_bytes: row.total_transmitted_bytes,
+        total_frame_count: row.total_frame_count,
+        aggregated_message_count: row.aggregated_message_count,
+        payload_efficiency_ratio: row.payload_efficiency_ratio,
+      }))
+    );
+  } catch (error) {
+    profileComparisonSummary.innerHTML =
+      `<div class="summary-card muted">Porównanie profili nie powiodło się.</div>`;
+    profileComparisonTable.innerHTML =
+      `<div class="summary-card muted">${error}</div>`;
+    profileComparisonChart.innerHTML =
+      `<div class="summary-card muted">Brak wykresu.</div>`;
+  }
 }
 
 async function fetchReport(key) {
@@ -1441,15 +2098,15 @@ singleTab.addEventListener("click", () => setMode("single"));
 sequenceTab.addEventListener("click", () => setMode("sequence"));
 singleForm.addEventListener("submit", analyzeSingle);
 sequenceForm.addEventListener("submit", analyzeSequence);
+compareNagleButton.addEventListener("click", compareNagleVariants);
+compareProfilesButton.addEventListener("click", compareTransmissionProfiles);
 
 navOverhead.addEventListener("click", () => setMainView("overhead"));
 navExperiments.addEventListener("click", () => setMainView("experiments"));
 navEnvironment.addEventListener("click", () => setMainView("environment"));
 navHistory.addEventListener("click", () => setMainView("history"));
 if (loadReportButton) {
-  if (loadReportButton) {
   loadReportButton.addEventListener("click", loadSelectedReport);
-}
 }
 
 requestResponseExperimentForm.addEventListener("submit", runRequestResponseExperiment);

@@ -33,6 +33,18 @@ def test_frontend_root_returns_html():
     assert "Top-level insights" not in response.text
     assert "Report viewer" not in response.text
 
+    assert "Algorytm Nagle’a" in response.text
+    assert "Maks. liczba wiadomości w grupie Nagle" in response.text
+    assert "Porównaj Nagle off/on" in response.text
+    assert "Porównanie Nagle off/on" in response.text
+    assert "Tabela porównawcza Nagle" in response.text
+    assert "Wizualizacja porównania Nagle" in response.text
+
+    assert "Porównaj profile transmisji" in response.text
+    assert "Porównanie profili transmisji" in response.text
+    assert "Tabela porównawcza profili" in response.text
+    assert "Wizualizacja porównania profili" in response.text
+
 
 def test_frontend_static_css_is_served():
     response = client.get("/static/styles.css")
