@@ -1,0 +1,83 @@
+syntax = "proto3";
+
+package messagecomparison;
+
+service MessageService {
+  rpc Process(MessageEnvelope) returns (ProcessReply);
+  rpc StreamChanges(StateChangeRequest) returns (stream StateChangeBatch);
+}
+
+enum OperationType {
+  OPERATION_TYPE_UNSPECIFIED = 0;
+  SET_VALUE = 1;
+  GET_VALUE = 2;
+}
+
+message MessagePayload {
+  OperationType operation = 1;
+  string resource_id = 2;
+
+  oneof optional_value {
+    int32 value = 3;
+  }
+}
+
+message MessageEnvelope {
+  string message_id = 1;
+  string timestamp = 2;
+  string source = 3;
+  MessagePayload payload = 4;
+}
+
+message UpdateResult {
+  string action = 1;
+  int32 stored_value = 2;
+}
+
+message GetResult {
+  string action = 1;
+  int32 current_value = 2;
+}
+
+message SuccessReply {
+  string status = 1;
+  string message_id = 2;
+  string operation = 3;
+  string resource_id = 4;
+
+  oneof result {
+    UpdateResult update_result = 5;
+    GetResult get_result = 6;
+  }
+}
+
+message ErrorReply {
+  string status = 1;
+  string code = 2;
+  string message = 3;
+  string details_json = 4;
+}
+
+message ProcessReply {
+  oneof outcome {
+    SuccessReply success = 1;
+    ErrorReply error = 2;
+  }
+}
+
+message StateChangeRequest {
+  int32 from_version = 1;
+}
+
+message StateChangeEvent {
+  int32 version = 1;
+  string timestamp = 2;
+  string resource_id = 3;
+  int32 value = 4;
+}
+
+message StateChangeBatch {
+  int32 from_version = 1;
+  int32 current_version = 2;
+  repeated StateChangeEvent events = 3;
+}
