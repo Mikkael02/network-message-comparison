@@ -56,17 +56,6 @@ const experimentPanelRealtime = document.getElementById("experiment-panel-realti
 const experimentPanelValidation = document.getElementById("experiment-panel-validation");
 const experimentPanelSerialization = document.getElementById("experiment-panel-serialization");
 
-const availableReports = document.getElementById("available-reports");
-const insightsCards = document.getElementById("insights-cards");
-const transportSummaryCards = document.getElementById("transport-summary-cards");
-const realtimeSummaryCards = document.getElementById("realtime-summary-cards");
-const validationSummaryCards = document.getElementById("validation-summary-cards");
-const requestResponseTable = document.getElementById("request-response-table");
-const realtimeTable = document.getElementById("realtime-table");
-const validationTable = document.getElementById("validation-table");
-const reportSelect = document.getElementById("report-select");
-const loadReportButton = document.getElementById("load-report-button");
-const reportViewer = document.getElementById("report-viewer");
 const effectiveSettingsBox = document.getElementById("effective-settings-box");
 const environmentStatusForm = document.getElementById("environment-status-form");
 const loadEnvironmentDefaultsButton = document.getElementById("load-environment-defaults");
@@ -1355,14 +1344,6 @@ async function compareTransmissionProfiles() {
   }
 }
 
-async function fetchReport(key) {
-  const response = await fetch(`/reports/${key}`);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch report: ${key}`);
-  }
-  return await response.json();
-}
-
 function fillEnvironmentStatusForm(config) {
   environmentStatusForm.querySelector('input[name="http_health_url"]').value =
     config.http_health_url;
@@ -2101,131 +2082,6 @@ async function runSerializationExperiment(event) {
   }
 }
 
-async function loadReportsDashboard() {
-  try {
-    const available = await fetchReport("available");
-    availableReports.innerHTML = "";
-
-    available.reports.forEach((report) => {
-      const div = document.createElement("div");
-      div.className = "summary-card";
-      div.innerHTML = `
-        <span class="label">${report.key}</span>
-        <span class="value ${report.exists ? "report-ok" : "report-missing"}">
-          ${report.exists ? "dostępny" : "brak"}
-        </span>
-      `;
-      availableReports.appendChild(div);
-    });
-
-    const requestResponse = await fetchReport("request-response");
-    const realtime = await fetchReport("realtime-fetch");
-    const validation = await fetchReport("validation-cost");
-    const interpretation = await fetchReport("interpretation");
-    const messageSize = await fetchReport("message-size");
-
-    const bestSet = bestRowBy(requestResponse, "avg_ms", (row) => row.operation === "set_value");
-    const bestGet = bestRowBy(requestResponse, "avg_ms", (row) => row.operation === "get_value");
-    const bestRealtime = bestRowBy(realtime, "avg_ms");
-    const smallestPayload = [...messageSize].sort((a, b) => a.request_size_bytes - b.request_size_bytes)[0];
-    const fastestValidation = bestRowBy(validation, "avg_us");
-    const slowestValidation = worstRowBy(validation, "avg_us");
-
-    renderCardGroup(insightsCards, [
-      { label: "Najlepszy transport dla ustawienia wartości", value: `${formatTransportName(bestSet.transport)} (${bestSet.avg_ms.toFixed(3)} ms)` },
-      { label: "Najlepszy transport dla pobrania wartości", value: `${formatTransportName(bestGet.transport)} (${bestGet.avg_ms.toFixed(3)} ms)` },
-      { label: "Najlepszy wynik scenariusza realtime", value: `${formatTransportName(bestRealtime.transport)} (${bestRealtime.avg_ms.toFixed(3)} ms)` },
-      { label: "Smallest request payload", value: `${smallestPayload.transport}/${smallestPayload.operation}` },
-    ]);
-
-    renderCardGroup(transportSummaryCards, [
-      { label: "set_value best avg [ms]", value: Math.min(...requestResponse.filter((r) => r.operation === "set_value").map((r) => r.avg_ms)).toFixed(3) },
-      { label: "get_value best avg [ms]", value: Math.min(...requestResponse.filter((r) => r.operation === "get_value").map((r) => r.avg_ms)).toFixed(3) },
-      { label: "Rows loaded", value: String(requestResponse.length) },
-      { label: "Transports", value: Array.from(new Set(requestResponse.map((r) => r.transport))).join(", ") },
-    ]);
-
-    renderCardGroup(realtimeSummaryCards, [
-      { label: "non_empty_fetch best avg [ms]", value: Math.min(...realtime.filter((r) => r.scenario === "non_empty_fetch").map((r) => r.avg_ms)).toFixed(3) },
-      { label: "empty_fetch best avg [ms]", value: Math.min(...realtime.filter((r) => r.scenario === "empty_fetch").map((r) => r.avg_ms)).toFixed(3) },
-      { label: "Rows loaded", value: String(realtime.length) },
-      { label: "Expected event counts", value: Array.from(new Set(realtime.map((r) => r.expected_event_count))).join(", ") },
-    ]);
-
-    renderCardGroup(validationSummaryCards, [
-      { label: "Fastest validation avg [us]", value: fastestValidation.avg_us.toFixed(3) },
-      { label: "Slowest validation avg [us]", value: slowestValidation.avg_us.toFixed(3) },
-      { label: "Załadowane scenariusze", value: String(validation.length) },
-      { label: "Najszybszy scenariusz", value: fastestValidation.scenario },
-    ]);
-
-    renderTable(
-      requestResponseTable,
-      [
-        { key: "transport", label: "Transport" },
-        { key: "operation", label: "Operacja" },
-        { key: "avg_ms", label: "Avg [ms]", render: (row) => row.avg_ms.toFixed(3) },
-        { key: "median_ms", label: "Median [ms]", render: (row) => row.median_ms.toFixed(3) },
-        { key: "min_ms", label: "Min [ms]", render: (row) => row.min_ms.toFixed(3) },
-        { key: "max_ms", label: "Max [ms]", render: (row) => row.max_ms.toFixed(3) },
-      ],
-      requestResponse
-    );
-
-    renderTable(
-      realtimeTable,
-      [
-        { key: "transport", label: "Transport" },
-        { key: "scenario", label: "Scenariusz" },
-        { key: "avg_ms", label: "Avg [ms]", render: (row) => row.avg_ms.toFixed(3) },
-        { key: "median_ms", label: "Median [ms]", render: (row) => row.median_ms.toFixed(3) },
-        { key: "expected_event_count", label: "Event count" },
-      ],
-      realtime
-    );
-
-    renderTable(
-      validationTable,
-      [
-        { key: "scenario", label: "Scenariusz" },
-        { key: "expected_outcome", label: "Expected outcome" },
-        { key: "avg_us", label: "Avg [us]", render: (row) => row.avg_us.toFixed(3) },
-        { key: "median_us", label: "Median [us]", render: (row) => row.median_us.toFixed(3) },
-        { key: "min_us", label: "Min [us]", render: (row) => row.min_us.toFixed(3) },
-        { key: "max_us", label: "Max [us]", render: (row) => row.max_us.toFixed(3) },
-      ],
-      validation
-    );
-
-    reportViewer.textContent = interpretation.content;
-  } catch (error) {
-    availableReports.innerHTML = `<div class="summary-card muted">Nie udało się załadować raportów.</div>`;
-    insightsCards.innerHTML = `<div class="summary-card muted">Could not load insights.</div>`;
-    transportSummaryCards.innerHTML = `<div class="summary-card muted">Could not load request-response data.</div>`;
-    realtimeSummaryCards.innerHTML = `<div class="summary-card muted">Could not load realtime data.</div>`;
-    validationSummaryCards.innerHTML = `<div class="summary-card muted">Could not load validation data.</div>`;
-    requestResponseTable.innerHTML = "";
-    realtimeTable.innerHTML = "";
-    validationTable.innerHTML = "";
-    reportViewer.textContent = "Could not load report content.";
-  }
-}
-
-async function loadSelectedReport() {
-  try {
-    const key = reportSelect.value;
-    const report = await fetchReport(key);
-
-    if (typeof report === "object" && report.content) {
-      reportViewer.textContent = report.content;
-    } else {
-      reportViewer.textContent = JSON.stringify(report, null, 2);
-    }
-  } catch (error) {
-    reportViewer.textContent = "Could not load selected report.";
-  }
-}
-
 singleTab.addEventListener("click", () => setMode("single"));
 sequenceTab.addEventListener("click", () => setMode("sequence"));
 singleForm.addEventListener("submit", analyzeSingle);
@@ -2237,10 +2093,6 @@ navOverhead.addEventListener("click", () => setMainView("overhead"));
 navExperiments.addEventListener("click", () => setMainView("experiments"));
 navEnvironment.addEventListener("click", () => setMainView("environment"));
 navHistory.addEventListener("click", () => setMainView("history"));
-if (loadReportButton) {
-  loadReportButton.addEventListener("click", loadSelectedReport);
-}
-
 if (experimentTabRequestResponse) {
   experimentTabRequestResponse.addEventListener("click", () => setExperimentTab("request_response"));
 }

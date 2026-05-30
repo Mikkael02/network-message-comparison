@@ -1,5 +1,4 @@
 from pathlib import Path
-import json
 from urllib.parse import urlparse
 
 from fastapi import FastAPI, HTTPException, Query
@@ -191,18 +190,6 @@ class PresetsResponse(BaseModel):
 BASE_DIR = Path(__file__).resolve().parent.parent
 FRONTEND_DIR = BASE_DIR / "frontend" / "static"
 PROJECT_ROOT = BASE_DIR.parent
-RESULTS_DIR = PROJECT_ROOT / "results" / "processed"
-
-REPORT_FILE_MAP = {
-    "request-response": "request_response_summary.json",
-    "realtime-fetch": "realtime_fetch_summary.json",
-    "message-size": "message_size_and_serialization_summary.json",
-    "validation-cost": "validation_cost_summary.json",
-    "combined": "combined_research_summary.json",
-    "interpretation": "interpretation_notes.txt",
-    "overhead-demo": "transmission_overhead_demo_summary.json",
-}
-
 
 app = FastAPI(
     title="Transmission Overhead Analysis API",
@@ -253,42 +240,6 @@ def analyze_sequence(
 ) -> SequenceTransmissionAnalysisResult:
     return calculate_sequence_overhead(input_data)
 
-
-@app.get("/reports/available")
-def get_available_reports() -> dict:
-    reports = []
-
-    for report_key, filename in REPORT_FILE_MAP.items():
-        path = RESULTS_DIR / filename
-        reports.append(
-            {
-                "key": report_key,
-                "filename": filename,
-                "exists": path.exists(),
-            }
-        )
-
-    return {"reports": reports}
-
-
-@app.get("/reports/{report_key}")
-def get_report(report_key: str):
-    if report_key not in REPORT_FILE_MAP:
-        raise HTTPException(status_code=404, detail="Report key not found")
-
-    path = RESULTS_DIR / REPORT_FILE_MAP[report_key]
-    if not path.exists():
-        raise HTTPException(status_code=404, detail="Report file not found")
-
-    if path.suffix == ".json":
-        with path.open("r", encoding="utf-8") as f:
-            return json.load(f)
-
-    if path.suffix == ".txt":
-        with path.open("r", encoding="utf-8") as f:
-            return {"content": f.read()}
-
-    raise HTTPException(status_code=400, detail="Unsupported report format")
 
 
 @app.get("/experiments/request-response/default-config")
